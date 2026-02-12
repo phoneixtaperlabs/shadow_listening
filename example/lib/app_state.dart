@@ -601,6 +601,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> stopListeningFromFlutter() async {
+    debugPrint("stopListening Called");
     permissionResult = 'Stopping listening...';
     notifyListeners();
 

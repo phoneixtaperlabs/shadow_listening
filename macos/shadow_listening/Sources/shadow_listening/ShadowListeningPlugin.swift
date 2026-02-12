@@ -1105,6 +1105,8 @@ public class ShadowListeningPlugin: NSObject, FlutterPlugin {
           WindowManager.shared.closeWindow(identifier: "listening")
         }
 
+        FlutterBridge.shared.invokeListeningEnded(reason: "confirmed")
+
         if let recordingResult {
           DispatchQueue.main.async { result(recordingResult.toDictionary()) }
         } else {
@@ -1121,6 +1123,8 @@ public class ShadowListeningPlugin: NSObject, FlutterPlugin {
         await MainActor.run {
           WindowManager.shared.closeWindow(identifier: "listening")
         }
+
+        FlutterBridge.shared.invokeListeningEnded(reason: "cancelled")
 
         DispatchQueue.main.async { result(nil) }
       }
