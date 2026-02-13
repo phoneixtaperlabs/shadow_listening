@@ -496,6 +496,83 @@ public class ShadowListeningPlugin: NSObject, FlutterPlugin {
         result(nil)
       }
 
+    // MARK: - Model Prewarming
+    case "preWarmModels":
+      Task.detached { [weak self] in
+        guard let self = self else {
+          DispatchQueue.main.async {
+            result(["asr": false, "diarization": false, "vad": false] as [String: Bool])
+          }
+          return
+        }
+
+        let args = call.arguments as? [String: Any]
+        let warmASR = args?["asr"] as? Bool ?? true
+        let warmDiarization = args?["diarization"] as? Bool ?? true
+        let warmVAD = args?["vad"] as? Bool ?? true
+        let asrEngine = args?["asrEngine"] as? String ?? "fluid"
+
+        var results: [String: Bool] = [:]
+
+        // Pre-warm VAD (using temporary instance)
+        if warmVAD {
+          do {
+            let tempVAD = VADService()
+            try await tempVAD.initialize()
+            // VADService has no explicit cleanup(); resources released on deinit
+            self.logger.info("[PreWarm] VAD prewarmed successfully")
+            results["vad"] = true
+          } catch {
+            self.logger.error("[PreWarm] VAD prewarm failed: \(error.localizedDescription)")
+            results["vad"] = false
+          }
+        }
+
+        // Pre-warm ASR (using temporary instance)
+        if warmASR {
+          do {
+            if asrEngine == "whisper" {
+              let tempWhisper = WhisperASRService(
+                modelName: "ggml-large-v3-turbo-q5_0.bin",
+                useGPU: true,
+                language: "auto"
+              )
+              try await tempWhisper.initialize()
+              tempWhisper.cleanup()
+              self.logger.info("[PreWarm] Whisper ASR prewarmed successfully")
+            } else {
+              let versionStr = args?["asrVersion"] as? String ?? "v2"
+              let version: FluidASRService.ModelVersion = versionStr == "v3" ? .multilingual : .english
+              let tempFluid = FluidASRService(version: version)
+              try await tempFluid.initialize()
+              tempFluid.cleanup()
+              self.logger.info("[PreWarm] Fluid ASR prewarmed successfully")
+            }
+            results["asr"] = true
+          } catch {
+            self.logger.error("[PreWarm] ASR prewarm failed: \(error.localizedDescription)")
+            results["asr"] = false
+          }
+        }
+
+        // Pre-warm Diarization (using temporary instance)
+        if warmDiarization {
+          do {
+            let tempDiarizer = FluidDiarizerService()
+            try await tempDiarizer.initialize()
+            tempDiarizer.cleanup()
+            self.logger.info("[PreWarm] Diarizer prewarmed successfully")
+            results["diarization"] = true
+          } catch {
+            self.logger.error("[PreWarm] Diarizer prewarm failed: \(error.localizedDescription)")
+            results["diarization"] = false
+          }
+        }
+
+        self.logger.info("[PreWarm] Completed: \(results)")
+        DispatchQueue.main.async { result(results) }
+      }
+
     // MARK: - Recording with Transcription
     case "startRecordingWithTranscription":
       Task.detached { [weak self] in

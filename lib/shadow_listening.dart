@@ -140,6 +140,39 @@ class ShadowListening {
     return ShadowListeningPlatform.instance.getFluidModelInfo();
   }
 
+  // MARK: - Model Prewarming
+
+  /// Pre-warm ML models to trigger CoreML compilation caching
+  ///
+  /// Loads each requested model into a temporary instance and immediately
+  /// discards it. This creates cached compiled CoreML models, making
+  /// subsequent real model loads significantly faster.
+  ///
+  /// Does not affect any currently loaded models.
+  ///
+  /// [asr] Whether to prewarm the ASR model (default: true)
+  /// [diarization] Whether to prewarm the diarization model (default: true)
+  /// [vad] Whether to prewarm the VAD model (default: true)
+  /// [asrEngine] ASR engine to prewarm: 'whisper' or 'fluid' (default: 'fluid')
+  ///
+  /// Returns a map indicating per-model success/failure:
+  /// ```dart
+  /// {'asr': true, 'diarization': true, 'vad': false}
+  /// ```
+  Future<Map<String, bool>> preWarmModels({
+    bool asr = true,
+    bool diarization = true,
+    bool vad = true,
+    String asrEngine = 'fluid',
+  }) {
+    return ShadowListeningPlatform.instance.preWarmModels(
+      asr: asr,
+      diarization: diarization,
+      vad: vad,
+      asrEngine: asrEngine,
+    );
+  }
+
   // MARK: - Recording with Transcription
   /// Start recording with transcription
   /// [asrEngine] can be 'whisper' or 'fluid' (default)

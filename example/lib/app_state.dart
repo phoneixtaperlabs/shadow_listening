@@ -37,6 +37,10 @@ class AppState extends ChangeNotifier {
   bool diarizerLoading = false;
   Map<String, dynamic>? diarizerModelInfo;
 
+  // Model Prewarming state
+  bool isPreWarming = false;
+  Map<String, bool>? preWarmResult;
+
   // Transcription state
   bool isTranscribing = false;
   String selectedASREngine = 'fluid';
@@ -84,6 +88,7 @@ class AppState extends ChangeNotifier {
     initPlatformState();
     checkAllPermissionStatus();
     _setupNativeCallHandler();
+    preWarmModels();
   }
 
   void _setupNativeCallHandler() {
@@ -429,6 +434,33 @@ class AppState extends ChangeNotifier {
     diarizerModelLoaded = loaded;
     diarizerModelInfo = info;
     permissionResult = 'Diarizer loaded: $loaded';
+    notifyListeners();
+  }
+
+  // Model Prewarming
+  Future<void> preWarmModels({
+    bool asr = true,
+    bool diarization = true,
+    bool vad = true,
+    String asrEngine = 'fluid',
+  }) async {
+    isPreWarming = true;
+    preWarmResult = null;
+    permissionResult = 'Pre-warming models...';
+    notifyListeners();
+
+    final result = await _plugin.preWarmModels(
+      asr: asr,
+      diarization: diarization,
+      vad: vad,
+      asrEngine: asrEngine,
+    );
+
+    isPreWarming = false;
+    preWarmResult = result;
+    final succeeded = result.entries.where((e) => e.value).map((e) => e.key).toList();
+    final failed = result.entries.where((e) => !e.value).map((e) => e.key).toList();
+    permissionResult = 'PreWarm done: ${succeeded.isNotEmpty ? "OK: ${succeeded.join(", ")}" : ""}${failed.isNotEmpty ? " Failed: ${failed.join(", ")}" : ""}';
     notifyListeners();
   }
 

@@ -191,6 +191,31 @@ class MethodChannelShadowListening extends ShadowListeningPlatform {
     return info.map((key, value) => MapEntry(key.toString(), value));
   }
 
+  // MARK: - Model Prewarming
+  @override
+  Future<Map<String, bool>> preWarmModels({
+    bool asr = true,
+    bool diarization = true,
+    bool vad = true,
+    String asrEngine = 'fluid',
+  }) async {
+    final resultMap = await methodChannel.invokeMethod<Map<Object?, Object?>>(
+      'preWarmModels',
+      {
+        'asr': asr,
+        'diarization': diarization,
+        'vad': vad,
+        'asrEngine': asrEngine,
+      },
+    );
+    if (resultMap == null) {
+      return {'asr': false, 'diarization': false, 'vad': false};
+    }
+    return resultMap.map(
+      (key, value) => MapEntry(key.toString(), value as bool? ?? false),
+    );
+  }
+
   // MARK: - Recording with Transcription
   @override
   Future<String?> startRecordingWithTranscription({String? asrEngine}) async {

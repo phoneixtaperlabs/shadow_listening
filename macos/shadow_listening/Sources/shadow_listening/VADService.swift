@@ -122,6 +122,7 @@ final class VADService {
 
         return appSupport
             .appendingPathComponent("com.taperlabs.shadow")
+            .appendingPathComponent("shared")
             .appendingPathComponent(modelDirectoryName)
             .appendingPathComponent(modelFileName)
     }

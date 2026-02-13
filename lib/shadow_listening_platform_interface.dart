@@ -147,6 +147,16 @@ abstract class ShadowListeningPlatform extends PlatformInterface {
     throw UnimplementedError('getFluidModelInfo() has not been implemented.');
   }
 
+  // MARK: - Model Prewarming
+  Future<Map<String, bool>> preWarmModels({
+    bool asr = true,
+    bool diarization = true,
+    bool vad = true,
+    String asrEngine = 'fluid',
+  }) {
+    throw UnimplementedError('preWarmModels() has not been implemented.');
+  }
+
   // MARK: - Recording with Transcription
   Future<String?> startRecordingWithTranscription({String? asrEngine}) {
     throw UnimplementedError('startRecordingWithTranscription() has not been implemented.');
