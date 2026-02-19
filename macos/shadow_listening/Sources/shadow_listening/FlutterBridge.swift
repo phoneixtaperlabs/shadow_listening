@@ -193,6 +193,18 @@ final class FlutterBridge {
         logger.info("[FlutterBridge] onInPersonMeetingChanged: \(isInPersonMeeting)")
     }
 
+    // MARK: - Error Events
+
+    /// Send error event to Flutter during listening session
+    func invokeError(code: ListeningErrorCode, message: String) {
+        let arguments: [String: Any] = [
+            "code": code.rawValue,
+            "message": message,
+        ]
+        invokeMethod("onError", arguments: arguments)
+        logger.error("[FlutterBridge] onError: \(code.rawValue) - \(message)")
+    }
+
     // MARK: - Capture Target Events
 
     /// 캡처 타겟 선택을 Flutter로 전송

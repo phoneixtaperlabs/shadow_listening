@@ -80,7 +80,9 @@ final class ListeningCoordinator: ObservableObject {
                 await MainActor.run { self.recordingState = .recording }
                 self.logger.info("[Coordinator] 녹음 시작됨")
             } catch {
+                
                 self.logger.error("[Coordinator] 녹음 시작 실패: \(error.localizedDescription)")
+                FlutterBridge.shared.invokeError(code: .recordingStartFailed, message: error.localizedDescription)
                 await MainActor.run { self.recordingState = .error(error.localizedDescription) }
             }
         }
@@ -106,6 +108,7 @@ final class ListeningCoordinator: ObservableObject {
             return result
         } catch {
             logger.error("[Coordinator] 녹음 중지 실패: \(error.localizedDescription)")
+            FlutterBridge.shared.invokeError(code: .recordingStopFailed, message: error.localizedDescription)
             await MainActor.run { recordingState = .idle }
             cleanup()
             return nil

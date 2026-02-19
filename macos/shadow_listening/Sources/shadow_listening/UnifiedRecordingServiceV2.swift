@@ -116,18 +116,33 @@ final class UnifiedRecordingServiceV2 {
         audioService?.enableSystemAudioMixing = config.enableSystemAudio
 
         // Initialize file writer
-        audioFileWriter = try AudioFileWriter()
+        do {
+            audioFileWriter = try AudioFileWriter()
+        } catch {
+            FlutterBridge.shared.invokeError(code: .audioInitFailed, message: error.localizedDescription)
+            throw error
+        }
 
         // Initialize VAD (혼합 오디오용)
-        vadService = VADService()
-        try await vadService?.initialize()
-        await vadService?.reset()
+        do {
+            vadService = VADService()
+            try await vadService?.initialize()
+            await vadService?.reset()
+        } catch {
+            FlutterBridge.shared.invokeError(code: .vadInitFailed, message: error.localizedDescription)
+            throw error
+        }
 
         // Initialize Mic VAD (내가 말한 구간 추적용)
-        micVADService = VADService()
-        try await micVADService?.initialize()
-        await micVADService?.reset()
-        lastMicSegmentCount = 0
+        do {
+            micVADService = VADService()
+            try await micVADService?.initialize()
+            await micVADService?.reset()
+            lastMicSegmentCount = 0
+        } catch {
+            FlutterBridge.shared.invokeError(code: .vadInitFailed, message: error.localizedDescription)
+            throw error
+        }
 
         // Reset Diarizer (새 세션)
         if config.enableDiarization {
@@ -141,11 +156,21 @@ final class UnifiedRecordingServiceV2 {
         } else {
             outputURL = AudioFileWriter.defaultOutputURL(filename: "unified_v2_recording")
         }
-        try audioFileWriter?.startWriting(to: outputURL)
+        do {
+            try audioFileWriter?.startWriting(to: outputURL)
+        } catch {
+            FlutterBridge.shared.invokeError(code: .audioWriteFailed, message: error.localizedDescription)
+            throw error
+        }
         recordedFileURL = outputURL
 
         // Start audio capture
-        try audioService?.startListening()
+        do {
+            try audioService?.startListening()
+        } catch {
+            FlutterBridge.shared.invokeError(code: .audioInitFailed, message: error.localizedDescription)
+            throw error
+        }
 
         // Main processing loop
         recordingTask = Task { [weak self] in
@@ -519,6 +544,7 @@ final class UnifiedRecordingServiceV2 {
             return .transcription(result)
         } catch {
             logger.error("[UnifiedRecordingV2] ASR failed: \(error.localizedDescription)")
+            FlutterBridge.shared.invokeError(code: .asrProcessingFailed, message: error.localizedDescription)
             return .none
         }
     }
@@ -539,6 +565,7 @@ final class UnifiedRecordingServiceV2 {
             return .diarization(segments)
         } catch {
             logger.error("[UnifiedRecordingV2] Diarization failed: \(error.localizedDescription)")
+            FlutterBridge.shared.invokeError(code: .diarizationProcessingFailed, message: error.localizedDescription)
             return .none
         }
     }
@@ -643,6 +670,7 @@ final class UnifiedRecordingServiceV2 {
             return hasSpeech
         } catch {
             logger.warning("[UnifiedRecordingV2] VAD check failed: \(error.localizedDescription), processing anyway")
+            FlutterBridge.shared.invokeError(code: .vadCheckFailed, message: error.localizedDescription)
             return true
         }
     }

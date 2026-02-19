@@ -175,6 +175,11 @@ abstract class ShadowListeningPlatform extends PlatformInterface {
     throw UnimplementedError('unloadDiarizerModel() has not been implemented.');
   }
 
+  /// Unload all ML models (ASR, VAD, Diarizer) to free memory
+  Future<void> unloadModels() {
+    throw UnimplementedError('unloadModels() has not been implemented.');
+  }
+
   Future<bool> isDiarizerModelLoaded() {
     throw UnimplementedError('isDiarizerModelLoaded() has not been implemented.');
   }

@@ -773,6 +773,10 @@ public class ShadowListeningPlugin: NSObject, FlutterPlugin {
       logger.info("[Diarizer] Model unloaded")
       result(nil)
 
+    case "unloadModels":
+      unloadModels()
+      result(nil)
+
     case "isDiarizerModelLoaded":
       result(diarizerService?.isInitialized ?? false)
 
@@ -1120,12 +1124,24 @@ public class ShadowListeningPlugin: NSObject, FlutterPlugin {
                 modelName: "ggml-large-v3-turbo-q5_0.bin",
                 useGPU: true, language: "auto"
               )
-              try? await self.whisperService?.initialize()
+              do {
+                try await self.whisperService?.initialize()
+              } catch {
+                self.logger.error("[Listening] Whisper ASR init failed: \(error.localizedDescription)")
+                FlutterBridge.shared.invokeError(code: .asrInitFailed, message: error.localizedDescription)
+                self.whisperService = nil
+              }
             }
           } else {
             if self.fluidService == nil || !(self.fluidService?.isInitialized ?? false) {
               self.fluidService = FluidASRService(version: .english)
-              try? await self.fluidService?.initialize()
+              do {
+                try await self.fluidService?.initialize()
+              } catch {
+                self.logger.error("[Listening] Fluid ASR init failed: \(error.localizedDescription)")
+                FlutterBridge.shared.invokeError(code: .asrInitFailed, message: error.localizedDescription)
+                self.fluidService = nil
+              }
             }
           }
         }
@@ -1133,7 +1149,13 @@ public class ShadowListeningPlugin: NSObject, FlutterPlugin {
         if enableDiarization {
           if self.diarizerService == nil || !(self.diarizerService?.isInitialized ?? false) {
             self.diarizerService = FluidDiarizerService()
-            try? await self.diarizerService?.initialize()
+            do {
+              try await self.diarizerService?.initialize()
+            } catch {
+              self.logger.error("[Listening] Diarizer init failed: \(error.localizedDescription)")
+              FlutterBridge.shared.invokeError(code: .diarizerInitFailed, message: error.localizedDescription)
+              self.diarizerService = nil
+            }
           }
         }
 
@@ -1336,6 +1358,22 @@ public class ShadowListeningPlugin: NSObject, FlutterPlugin {
   }
 
   // MARK: - Private Helpers
+
+  /// Unload all ML models (ASR, VAD, Diarizer) to free memory
+  private func unloadModels() {
+    whisperService?.cleanup()
+    whisperService = nil
+
+    fluidService?.cleanup()
+    fluidService = nil
+
+    diarizerService?.cleanup()
+    diarizerService = nil
+
+    micVADService = nil
+
+    logger.info("[Plugin] All ML models unloaded")
+  }
 
   /// WAV 파일에서 특정 시간 범위의 샘플 추출
   private func extractSamples(from url: URL, startTime: Double, endTime: Double) throws -> [Float] {

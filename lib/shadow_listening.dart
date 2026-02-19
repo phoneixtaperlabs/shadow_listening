@@ -204,6 +204,12 @@ class ShadowListening {
     return ShadowListeningPlatform.instance.unloadDiarizerModel();
   }
 
+  /// Unload all ML models (ASR, VAD, Diarizer) to free memory.
+  /// Call after listening ends to release resources.
+  Future<void> unloadModels() {
+    return ShadowListeningPlatform.instance.unloadModels();
+  }
+
   /// Check if diarizer model is currently loaded
   Future<bool> isDiarizerModelLoaded() {
     return ShadowListeningPlatform.instance.isDiarizerModelLoaded();

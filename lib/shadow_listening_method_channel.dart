@@ -246,6 +246,11 @@ class MethodChannelShadowListening extends ShadowListeningPlatform {
   }
 
   @override
+  Future<void> unloadModels() async {
+    await methodChannel.invokeMethod<void>('unloadModels');
+  }
+
+  @override
   Future<bool> isDiarizerModelLoaded() async {
     final loaded = await methodChannel.invokeMethod<bool>('isDiarizerModelLoaded');
     return loaded ?? false;

@@ -189,6 +189,16 @@ class AppState extends ChangeNotifier {
       });
       notifyListeners();
     }
+
+    if (call.method == 'onError') {
+      final args = Map<String, dynamic>.from(call.arguments as Map);
+      final code = args['code'] as String;
+      final message = args['message'] as String;
+      debugPrint('[Native] ERROR: code=$code, message=$message');
+      notifyListeners();
+      return null;
+    }
+
     return null;
   }
 
