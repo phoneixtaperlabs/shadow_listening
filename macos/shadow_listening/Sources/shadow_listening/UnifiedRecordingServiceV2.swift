@@ -316,8 +316,8 @@ final class UnifiedRecordingServiceV2 {
 
     /// 녹음 취소 — 결과 폐기, Flutter로 청크 전송 중단
     func cancelRecording() async {
-        guard isRecording else {
-            logger.info("[UnifiedRecordingV2] cancelRecording ignored — not recording")
+        guard !isCancelled else {
+            logger.info("[UnifiedRecordingV2] cancelRecording ignored — already cancelled")
             return
         }
 
@@ -345,7 +345,6 @@ final class UnifiedRecordingServiceV2 {
         // Full cleanup
         isRecording = false
         isStopping = false
-        isCancelled = false
         audioService = nil
         audioFileWriter = nil
         vadService = nil
@@ -396,7 +395,7 @@ final class UnifiedRecordingServiceV2 {
 
                     // 4. Check if chunk is ready (5초)
                     let chunkSize = Int(self.chunkDuration * self.sampleRate)
-                    while self.chunkBuffer.count >= chunkSize && !self.isStopping {
+                    while self.chunkBuffer.count >= chunkSize && !self.isStopping && !self.isCancelled {
                         let chunk = Array(self.chunkBuffer.prefix(chunkSize))
                         self.chunkBuffer.removeFirst(chunkSize)
 
@@ -436,6 +435,8 @@ final class UnifiedRecordingServiceV2 {
     }
 
     private func processChunk(_ samples: [Float], startTime: Double, endTime: Double, isFinalChunk: Bool = false) async {
+        guard !isCancelled, !Task.isCancelled else { return }
+
         let hasSpeech = await checkSpeechInChunk(samples)
 
         if !hasSpeech {
