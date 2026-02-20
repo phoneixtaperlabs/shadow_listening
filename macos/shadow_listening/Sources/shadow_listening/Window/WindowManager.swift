@@ -92,6 +92,9 @@ final class WindowManager {
     /// Event handler closure for window events
     var onWindowEvent: ((WindowEvent) -> Void)?
 
+    /// Active ListeningViewModel (set by ListeningView, cleared on disappear)
+    @MainActor weak var listeningViewModel: ListeningViewModel?
+
     // MARK: - Public API
 
     /// Check if a window with given identifier exists and is visible
@@ -223,6 +226,9 @@ final class WindowManager {
     @MainActor
     func handleWindowClosed(identifier: String) {
         windowControllers.removeValue(forKey: identifier)
+        if identifier == "listening" {
+            listeningViewModel = nil
+        }
         emitEvent(.closed(windowId: identifier))
         logger.info("[WindowManager] Window '\(identifier)' closed via delegate")
     }

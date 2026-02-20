@@ -56,6 +56,7 @@ struct ListeningView: View {
         .environmentObject(viewModel)
         .padding(EdgeInsets(top: 15, leading: 0, bottom: 5, trailing: 3))
         .onAppear {
+            WindowManager.shared.listeningViewModel = viewModel
             viewModel.startDeviceMonitoring()
             viewModel.startCountdownRecording()
             isControlBarExpanded = true

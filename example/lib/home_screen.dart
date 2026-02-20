@@ -10,6 +10,7 @@ import 'sections/recording_section.dart';
 import 'sections/transcription_section.dart';
 import 'sections/listening_section.dart';
 import 'sections/unified_section.dart';
+import 'sections/screenshot_section.dart';
 import 'sections/window_section.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -65,6 +66,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             const DiarizationSection(),
             const UnifiedSection(),
             const ListeningSection(),
+            const ScreenshotSection(),
             const WindowSection(),
           ],
         ),

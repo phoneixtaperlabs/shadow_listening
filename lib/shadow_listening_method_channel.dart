@@ -504,4 +504,30 @@ class MethodChannelShadowListening extends ShadowListeningPlatform {
     if (windows == null) return [];
     return windows.map((e) => e.toString()).toList();
   }
+
+  // MARK: - Capture Target Enumeration
+
+  @override
+  Future<Map<String, dynamic>> enumerateWindows() async {
+    final result = await methodChannel.invokeMethod<Map<Object?, Object?>>('enumerateWindows');
+    if (result == null) return {'windows': [], 'displays': []};
+
+    final windows = (result['windows'] as List<Object?>?)
+        ?.map((e) => Map<String, dynamic>.from(e as Map))
+        .toList() ?? [];
+
+    final displays = (result['displays'] as List<Object?>?)
+        ?.map((e) => Map<String, dynamic>.from(e as Map))
+        .toList() ?? [];
+
+    return {
+      'windows': windows,
+      'displays': displays,
+    };
+  }
+
+  @override
+  Future<dynamic> updateCaptureTarget(Map<String, dynamic> targetConfig) async {
+    return methodChannel.invokeMethod('updateCaptureTarget', {'targetConfig': targetConfig});
+  }
 }

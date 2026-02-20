@@ -1,5 +1,6 @@
 import Combine
 import CoreAudio
+import CoreGraphics
 import Foundation
 import OSLog
 
@@ -201,6 +202,85 @@ final class ListeningViewModel: ObservableObject {
         selectedCaptureTarget = target
         FlutterBridge.shared.invokeCaptureTargetSelected(target.asDictionary())
         logger.info("캡처 타겟 선택: \(target.name)")
+    }
+
+    /// Flutter에서 캡처 타겟 업데이트 요청 처리
+    /// - Parameters:
+    ///   - type: 캡처 타겟 타입 ("noCapture", "autoCapture", "window", "display")
+    ///   - windowID: 윈도우 ID (정확 매칭)
+    ///   - windowTitle: 윈도우 제목 (부분 매칭, 대소문자 무시)
+    ///   - displayID: 디스플레이 ID (정확 매칭)
+    ///   - displayName: 디스플레이 이름 (부분 매칭, 대소문자 무시)
+    /// - Returns: 매칭된 CaptureTarget, 없으면 nil
+    func updateCaptureTarget(
+        type: String,
+        windowID: Int? = nil,
+        windowTitle: String? = nil,
+        displayID: Int? = nil,
+        displayName: String? = nil
+    ) async -> CaptureTarget? {
+        await fetchCaptureTargets()
+
+        switch type {
+        case "noCapture":
+            selectedCaptureTarget = .noCapture
+            return .noCapture
+
+        case "autoCapture":
+            if windowID != nil || windowTitle != nil {
+                for target in captureTargets {
+                    if case .window(let info) = target {
+                        if let id = windowID, info.windowID == CGWindowID(id) {
+                            let t = CaptureTarget.autoCapture(info)
+                            selectedCaptureTarget = t
+                            return t
+                        } else if let title = windowTitle,
+                                  info.title.lowercased().contains(title.lowercased()) {
+                            let t = CaptureTarget.autoCapture(info)
+                            selectedCaptureTarget = t
+                            return t
+                        }
+                    }
+                }
+                return nil
+            } else {
+                selectedCaptureTarget = .autoCapture(nil)
+                return .autoCapture(nil)
+            }
+
+        case "window":
+            for target in captureTargets {
+                if case .window(let info) = target {
+                    if let id = windowID, info.windowID == CGWindowID(id) {
+                        selectedCaptureTarget = target
+                        return target
+                    } else if let title = windowTitle,
+                              info.title.lowercased().contains(title.lowercased()) {
+                        selectedCaptureTarget = target
+                        return target
+                    }
+                }
+            }
+            return nil
+
+        case "display":
+            for target in captureTargets {
+                if case .display(let info) = target {
+                    if let id = displayID, info.displayID == id {
+                        selectedCaptureTarget = target
+                        return target
+                    } else if let name = displayName,
+                              info.localizedName.lowercased().contains(name.lowercased()) {
+                        selectedCaptureTarget = target
+                        return target
+                    }
+                }
+            }
+            return nil
+
+        default:
+            return nil
+        }
     }
 
     // MARK: - Private

@@ -561,4 +561,23 @@ class ShadowListening {
   Future<List<String>> getActiveWindows() {
     return ShadowListeningPlatform.instance.getActiveWindows();
   }
+
+  // MARK: - Capture Target Enumeration
+
+  /// Enumerate available capture targets (windows and displays).
+  ///
+  /// Returns a map containing:
+  ///   - windows: List of window dictionaries with type, windowID, title, appName, bundleID, x, y, width, height, isOnScreen, isActive
+  ///   - displays: List of display dictionaries with type, displayID, localizedName, x, y, width, height
+  Future<Map<String, dynamic>> enumerateWindows() {
+    return ShadowListeningPlatform.instance.enumerateWindows();
+  }
+
+  /// Update the native Listening UI's selected capture target.
+  ///
+  /// [targetConfig] must contain a 'type' key ('noCapture', 'autoCapture', 'window', 'display')
+  /// and optional search params: windowID, windowTitle, displayID, displayName.
+  Future<dynamic> updateCaptureTarget(Map<String, dynamic> targetConfig) {
+    return ShadowListeningPlatform.instance.updateCaptureTarget(targetConfig);
+  }
 }

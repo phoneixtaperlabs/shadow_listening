@@ -1352,6 +1352,80 @@ public class ShadowListeningPlugin: NSObject, FlutterPlugin {
       let windows = WindowManager.shared.activeWindowIdentifiers
       result(windows)
 
+    case "enumerateWindows":
+      Task {
+        let screenshotService = ScreenshotCaptureService()
+        let targets = await screenshotService.buildCaptureTargets()
+
+        var windows: [[String: Any]] = []
+        var displays: [[String: Any]] = []
+
+        for target in targets {
+          switch target {
+          case .window:
+            windows.append(target.asDictionary())
+          case .display:
+            displays.append(target.asDictionary())
+          case .autoCapture, .noCapture:
+            break
+          }
+        }
+
+        let response: [String: Any] = [
+          "windows": windows,
+          "displays": displays
+        ]
+
+        DispatchQueue.main.async {
+          result(response)
+        }
+      }
+
+    case "updateCaptureTarget":
+      guard let args = call.arguments as? [String: Any],
+            let targetConfig = args["targetConfig"] as? [String: Any] else {
+        result(FlutterError(code: "INVALID_ARGS", message: "Missing targetConfig", details: nil))
+        return
+      }
+      Task {
+        guard let type = targetConfig["type"] as? String else {
+          DispatchQueue.main.async {
+            result(FlutterError(code: "INVALID_TYPE", message: "Missing 'type' in targetConfig", details: nil))
+          }
+          return
+        }
+
+        guard let viewModel = await WindowManager.shared.listeningViewModel else {
+          DispatchQueue.main.async {
+            result(FlutterError(code: "NO_VIEW_MODEL", message: "ListeningViewModel not available", details: nil))
+          }
+          return
+        }
+
+        let windowID = targetConfig["windowID"] as? Int
+        let windowTitle = targetConfig["windowTitle"] as? String
+        let displayID = targetConfig["displayID"] as? Int
+        let displayName = targetConfig["displayName"] as? String
+
+        guard let foundTarget = await viewModel.updateCaptureTarget(
+          type: type,
+          windowID: windowID,
+          windowTitle: windowTitle,
+          displayID: displayID,
+          displayName: displayName
+        ) else {
+          DispatchQueue.main.async {
+            result(FlutterError(code: "TARGET_NOT_FOUND", message: "Target not found for type '\(type)'", details: nil))
+          }
+          return
+        }
+
+        self.logger.info("Capture target updated to: \(foundTarget.name)")
+        DispatchQueue.main.async {
+          result(foundTarget.asDictionary())
+        }
+      }
+
     default:
       result(FlutterMethodNotImplemented)
     }

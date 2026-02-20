@@ -731,4 +731,51 @@ class AppState extends ChangeNotifier {
     windowEvents.clear();
     notifyListeners();
   }
+
+  // Screenshot / Capture Target
+  List<Map<String, dynamic>> enumeratedWindows = [];
+  List<Map<String, dynamic>> enumeratedDisplays = [];
+  String? updateCaptureTargetResult;
+
+  Future<void> enumerateWindows() async {
+    permissionResult = 'Enumerating windows...';
+    notifyListeners();
+
+    try {
+      final result = await _plugin.enumerateWindows();
+      enumeratedWindows = (result['windows'] as List?)
+              ?.map((e) => Map<String, dynamic>.from(e as Map))
+              .toList() ??
+          [];
+      enumeratedDisplays = (result['displays'] as List?)
+              ?.map((e) => Map<String, dynamic>.from(e as Map))
+              .toList() ??
+          [];
+      permissionResult =
+          'Found ${enumeratedWindows.length} windows, ${enumeratedDisplays.length} displays';
+      debugPrint('[enumerateWindows] windows: $enumeratedWindows');
+      debugPrint('[enumerateWindows] displays: $enumeratedDisplays');
+    } catch (e) {
+      permissionResult = 'enumerateWindows failed: $e';
+      debugPrint('[enumerateWindows] error: $e');
+    }
+    notifyListeners();
+  }
+
+  Future<void> updateCaptureTarget(Map<String, dynamic> targetConfig) async {
+    permissionResult = 'Updating capture target: ${targetConfig['type']}...';
+    notifyListeners();
+
+    try {
+      final result = await _plugin.updateCaptureTarget(targetConfig);
+      updateCaptureTargetResult = result?.toString();
+      permissionResult = 'Capture target updated: ${targetConfig['type']}';
+      debugPrint('[updateCaptureTarget] result: $result');
+    } on PlatformException catch (e) {
+      updateCaptureTargetResult = null;
+      permissionResult = 'updateCaptureTarget failed: ${e.code} - ${e.message}';
+      debugPrint('[updateCaptureTarget] error: ${e.code} - ${e.message}');
+    }
+    notifyListeners();
+  }
 }

@@ -300,4 +300,14 @@ abstract class ShadowListeningPlatform extends PlatformInterface {
   Future<List<String>> getActiveWindows() {
     throw UnimplementedError('getActiveWindows() has not been implemented.');
   }
+
+  // MARK: - Capture Target Enumeration
+
+  Future<Map<String, dynamic>> enumerateWindows() {
+    throw UnimplementedError('enumerateWindows() has not been implemented.');
+  }
+
+  Future<dynamic> updateCaptureTarget(Map<String, dynamic> targetConfig) {
+    throw UnimplementedError('updateCaptureTarget() has not been implemented.');
+  }
 }
