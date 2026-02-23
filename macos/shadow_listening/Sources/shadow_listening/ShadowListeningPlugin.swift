@@ -105,6 +105,7 @@ public class ShadowListeningPlugin: NSObject, FlutterPlugin {
       micService?.stopListening()
       logger.info("Mic listening stopped")
       result(nil)
+        
 
     case "getMicListeningStatus":
       let status = micService?.state.rawValue ?? "idle"
@@ -774,8 +775,12 @@ public class ShadowListeningPlugin: NSObject, FlutterPlugin {
       result(nil)
 
     case "unloadModels":
-      unloadModels()
-      result(nil)
+      Task.detached { [weak self] in
+        guard let self else { DispatchQueue.main.async { result(nil) }; return }
+        await ListeningCoordinator.shared.waitUntilIdle()
+        self.unloadModels()
+        DispatchQueue.main.async { result(nil) }
+      }
 
     case "isDiarizerModelLoaded":
       result(diarizerService?.isInitialized ?? false)

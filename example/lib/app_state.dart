@@ -448,29 +448,20 @@ class AppState extends ChangeNotifier {
   }
 
   // Model Prewarming
-  Future<void> preWarmModels({
-    bool asr = true,
-    bool diarization = true,
-    bool vad = true,
-    String asrEngine = 'fluid',
-  }) async {
+  Future<void> preWarmModels({bool asr = true, bool diarization = true, bool vad = true, String asrEngine = 'fluid'}) async {
     isPreWarming = true;
     preWarmResult = null;
     permissionResult = 'Pre-warming models...';
     notifyListeners();
 
-    final result = await _plugin.preWarmModels(
-      asr: asr,
-      diarization: diarization,
-      vad: vad,
-      asrEngine: asrEngine,
-    );
+    final result = await _plugin.preWarmModels(asr: asr, diarization: diarization, vad: vad, asrEngine: asrEngine);
 
     isPreWarming = false;
     preWarmResult = result;
     final succeeded = result.entries.where((e) => e.value).map((e) => e.key).toList();
     final failed = result.entries.where((e) => !e.value).map((e) => e.key).toList();
-    permissionResult = 'PreWarm done: ${succeeded.isNotEmpty ? "OK: ${succeeded.join(", ")}" : ""}${failed.isNotEmpty ? " Failed: ${failed.join(", ")}" : ""}';
+    permissionResult =
+        'PreWarm done: ${succeeded.isNotEmpty ? "OK: ${succeeded.join(", ")}" : ""}${failed.isNotEmpty ? " Failed: ${failed.join(", ")}" : ""}';
     notifyListeners();
   }
 
@@ -648,6 +639,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
 
     final result = await _plugin.stopListening();
+    await _plugin.unloadModels(); // CRASH TEST: reproduce main app behavior
 
     isListening = false;
     listeningResult = result;
@@ -658,6 +650,18 @@ class AppState extends ChangeNotifier {
     } else {
       permissionResult = 'Listening stopped (no results)';
     }
+    notifyListeners();
+  }
+
+  /// CRASH TEST: Cancel listening without awaiting, then immediately unload models
+  Future<void> cancelAndUnloadListening() async {
+    permissionResult = 'Cancel + Unload (crash test)...';
+    notifyListeners();
+    // Fire cancel without awaiting — then immediately unload
+    _plugin.cancelListening(); // no await!
+    await _plugin.unloadModels();
+    isListening = false;
+    permissionResult = 'Cancel + Unload done (if no crash)';
     notifyListeners();
   }
 
@@ -743,16 +747,9 @@ class AppState extends ChangeNotifier {
 
     try {
       final result = await _plugin.enumerateWindows();
-      enumeratedWindows = (result['windows'] as List?)
-              ?.map((e) => Map<String, dynamic>.from(e as Map))
-              .toList() ??
-          [];
-      enumeratedDisplays = (result['displays'] as List?)
-              ?.map((e) => Map<String, dynamic>.from(e as Map))
-              .toList() ??
-          [];
-      permissionResult =
-          'Found ${enumeratedWindows.length} windows, ${enumeratedDisplays.length} displays';
+      enumeratedWindows = (result['windows'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? [];
+      enumeratedDisplays = (result['displays'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? [];
+      permissionResult = 'Found ${enumeratedWindows.length} windows, ${enumeratedDisplays.length} displays';
       debugPrint('[enumerateWindows] windows: $enumeratedWindows');
       debugPrint('[enumerateWindows] displays: $enumeratedDisplays');
     } catch (e) {

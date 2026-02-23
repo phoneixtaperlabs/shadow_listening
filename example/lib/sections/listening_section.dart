@@ -17,14 +17,8 @@ class ListeningSection extends StatelessWidget {
         const SizedBox(height: 32),
         const Divider(),
         const SizedBox(height: 16),
-        const Text(
-          'Listening',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        const Text(
-          'One-click: model loading + recording + native window',
-          style: TextStyle(fontSize: 12, color: Colors.grey),
-        ),
+        const Text('Listening', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        const Text('One-click: model loading + recording + native window', style: TextStyle(fontSize: 12, color: Colors.grey)),
         const SizedBox(height: 16),
         _ConfigurationSection(state: state),
         _ListeningControls(state: state),
@@ -47,22 +41,14 @@ class _ConfigurationSection extends StatelessWidget {
       children: [
         Row(
           children: [
-            Switch(
-              value: state.listeningEnableASR,
-              onChanged:
-                  state.isListening ? null : (value) => state.setListeningEnableASR(value),
-            ),
+            Switch(value: state.listeningEnableASR, onChanged: state.isListening ? null : (value) => state.setListeningEnableASR(value)),
             const Text('ASR'),
             const SizedBox(width: 16),
             if (state.listeningEnableASR)
               DropdownButton<String>(
                 value: state.listeningASREngine,
-                items: const [
-                  DropdownMenuItem(value: 'fluid', child: Text('Fluid')),
-                  DropdownMenuItem(value: 'whisper', child: Text('Whisper')),
-                ],
-                onChanged:
-                    state.isListening ? null : (value) => state.setListeningASREngine(value!),
+                items: const [DropdownMenuItem(value: 'fluid', child: Text('Fluid')), DropdownMenuItem(value: 'whisper', child: Text('Whisper'))],
+                onChanged: state.isListening ? null : (value) => state.setListeningASREngine(value!),
               ),
           ],
         ),
@@ -70,9 +56,7 @@ class _ConfigurationSection extends StatelessWidget {
           children: [
             Switch(
               value: state.listeningEnableDiarization,
-              onChanged: state.isListening
-                  ? null
-                  : (value) => state.setListeningEnableDiarization(value),
+              onChanged: state.isListening ? null : (value) => state.setListeningEnableDiarization(value),
             ),
             const Text('Diarization'),
           ],
@@ -105,10 +89,7 @@ class _ListeningControls extends StatelessWidget {
           children: [
             Expanded(
               child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.teal,
-                  foregroundColor: Colors.white,
-                ),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white),
                 onPressed: state.isListening ? null : () => state.startListening(),
                 child: const Text('Start Listening'),
               ),
@@ -122,11 +103,14 @@ class _ListeningControls extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 4),
-        Text(
-          'Models auto-loaded. Cancel via native ControlBar (xmark).',
-          style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+        const SizedBox(height: 8),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+          onPressed: !state.isListening ? null : () => state.cancelAndUnloadListening(),
+          child: const Text('Cancel + Unload (Crash Test)'),
         ),
+        const SizedBox(height: 4),
+        Text('Models auto-loaded. Cancel via native ControlBar (xmark).', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
       ],
     );
   }
@@ -149,31 +133,19 @@ class _RealtimeResults extends StatelessWidget {
         const SizedBox(height: 16),
         Row(
           children: [
-            const Text(
-              'Real-time Results',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-            ),
+            const Text('Real-time Results', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
             const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.teal,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                '${state.realtimeChunks.length} chunks',
-                style: const TextStyle(color: Colors.white, fontSize: 11),
-              ),
+              decoration: BoxDecoration(color: Colors.teal, borderRadius: BorderRadius.circular(4)),
+              child: Text('${state.realtimeChunks.length} chunks', style: const TextStyle(color: Colors.white, fontSize: 11)),
             ),
           ],
         ),
         const SizedBox(height: 8),
         Container(
           constraints: const BoxConstraints(maxHeight: 200),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.teal.shade300),
-            borderRadius: BorderRadius.circular(8),
-          ),
+          decoration: BoxDecoration(border: Border.all(color: Colors.teal.shade300), borderRadius: BorderRadius.circular(8)),
           child: ListView.separated(
             shrinkWrap: true,
             itemCount: state.realtimeChunks.length,
@@ -190,10 +162,7 @@ class _RealtimeResults extends StatelessWidget {
                 dense: true,
                 title: Text(
                   transcription != null ? transcription['text']?.toString() ?? '' : '(no speech)',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: transcription != null ? Colors.black : Colors.grey,
-                  ),
+                  style: TextStyle(fontSize: 13, color: transcription != null ? Colors.black : Colors.grey),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -246,11 +215,7 @@ class _FinalResults extends StatelessWidget {
                 'Duration: ${totalDuration?.toStringAsFixed(1)}s | Speakers: $speakerCount',
                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
               ),
-              if (audioFilePath != null)
-                Text(
-                  'File: ${audioFilePath.split('/').last}',
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                ),
+              if (audioFilePath != null) Text('File: ${audioFilePath.split('/').last}', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
               Text(
                 '${transcriptions.length} transcriptions, ${speakerSegments.length} speaker segments',
                 style: TextStyle(fontSize: 11, color: Colors.grey.shade600),

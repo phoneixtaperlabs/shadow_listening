@@ -128,6 +128,17 @@ final class ListeningCoordinator: ObservableObject {
         cleanup()
     }
 
+    /// In-flight 작업이 완료될 때까지 대기 (모델 unload 전 안전성 보장)
+    ///
+    /// cancelRecording()과 독립적으로 동작 — 이미 cancel이 진행 중이어도
+    /// recordingTask/currentChunkTask의 실제 완료를 직접 대기.
+    /// 이미 idle이면 즉시 리턴.
+    func waitUntilIdle() async {
+        guard let service = recordingService else { return }
+        await service.waitForInFlightTasks()
+    }
+
+    
     private func cleanup() {
         recordingService = nil
         Task { @MainActor [weak self] in

@@ -211,7 +211,9 @@ final class UnifiedRecordingServiceV2 {
 
         // 4) MicVAD finalize - 진행 중인 세그먼트 종료 (endTime 설정)
         micVADService?.finalize()
+        
 
+        
         // 5) 남은 버퍼를 큐에 추가 (무손실)
         let chunkSize = Int(chunkDuration * sampleRate)
         var lastEnqueuedAsFinal = false
@@ -314,6 +316,14 @@ final class UnifiedRecordingServiceV2 {
         )
     }
 
+    /// In-flight 작업(녹음 루프 + ASR/Diarization)이 완료될 때까지 대기.
+    /// cancelRecording()과 독립적 — isCancelled 상태와 무관하게 안전하게 대기 가능.
+    /// 모델 unload 전에 호출하여 whisper_full() 완료를 보장.
+    func waitForInFlightTasks() async {
+        if let task = recordingTask { await task.value }
+        if let task = currentChunkTask { await task.value }
+    }
+
     /// 녹음 취소 — 결과 폐기, Flutter로 청크 전송 중단
     func cancelRecording() async {
         guard !isCancelled else {
@@ -331,9 +341,14 @@ final class UnifiedRecordingServiceV2 {
         if let task = recordingTask { await task.value }
         recordingTask = nil
 
-        // Cancel queued chunk tasks, then wait for in-progress one to finish
-        currentChunkTask?.cancel()
-        if let task = currentChunkTask { await task.value }
+        // Wait for in-progress ASR to finish safely (do NOT cancel — whisper_full() is a
+        // non-cancellable C call; cancelling the Task could let us proceed to resource cleanup
+        // while the C engine is still running, causing use-after-free crashes).
+        // The isCancelled flag above already prevents new chunks from being processed.
+        if let task = currentChunkTask {
+            logger.info("[UnifiedRecordingV2] Waiting for in-progress ASR to finish safely...")
+            await task.value
+        }
         currentChunkTask = nil
 
         // Discard remaining buffer
