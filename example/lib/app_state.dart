@@ -167,7 +167,7 @@ class AppState extends ChangeNotifier {
 
       debugPrint('[Native] Chunk #$chunkIndex: ${startTime}s - ${endTime}s${isFinalChunk ? ' (FINAL)' : ''}');
       if (micVADSegments.isNotEmpty) {
-        debugPrint('[Native]   MicVAD: ${micVADSegments.length} segments');
+        debugPrint('[Native]   MicVAD: ${micVADSegments.length} segments: ${micVADSegments.map((s) => '${s['startTime']}s-${s['endTime']}s').join(', ')}');
       }
       if (transcription != null) {
         debugPrint('[Native]   Transcription: ${transcription['text']}');

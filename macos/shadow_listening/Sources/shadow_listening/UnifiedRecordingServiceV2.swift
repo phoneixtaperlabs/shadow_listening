@@ -526,19 +526,29 @@ final class UnifiedRecordingServiceV2 {
     private func extractNewMicVADSegments(startTime: Double, endTime: Double) -> [(startTime: Double, endTime: Double)] {
         guard let vad = micVADService else { return [] }
 
+        // 1. 완료된 세그먼트 (기존 로직)
         let allSegments = vad.getSpeechSegments()
         let newSegments = Array(allSegments.dropFirst(lastMicSegmentCount))
         lastMicSegmentCount = allSegments.count
 
-        // 현재 청크 범위와 겹치는 세그먼트 반환
-        return newSegments.compactMap { segment in
+        var result: [(startTime: Double, endTime: Double)] = newSegments.compactMap { segment in
             guard let end = segment.endTime else { return nil }
-            // 세그먼트가 청크 범위와 겹치면 포함
             if end >= startTime && segment.startTime <= endTime {
                 return (startTime: segment.startTime, endTime: end)
             }
             return nil
         }
+
+        // 2. 진행 중인 세그먼트: 유저가 현재 말하고 있으면
+        //    청크 범위로 clamp해서 포함 (micVADSegments가 []인 문제 방지)
+        if let current = vad.getCurrentSegment(), current.endTime == nil {
+            if current.startTime <= endTime {
+                let clampedStart = max(current.startTime, startTime)
+                result.append((startTime: clampedStart, endTime: endTime))
+            }
+        }
+
+        return result
     }
 
     private enum ChunkProcessingResult {
