@@ -170,6 +170,7 @@ class AppState extends ChangeNotifier {
       final isFinalChunk = args['isFinalChunk'] as bool? ?? false;
 
       final micVADSegments = (args['micVADSegments'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      final sysVADSegments = (args['sysVADSegments'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? [];
 
       final transcription = args['transcription'] != null ? Map<String, dynamic>.from(args['transcription'] as Map) : null;
 
@@ -178,6 +179,9 @@ class AppState extends ChangeNotifier {
       debugPrint('[Native] Chunk #$chunkIndex: ${startTime}s - ${endTime}s${isFinalChunk ? ' (FINAL)' : ''}');
       if (micVADSegments.isNotEmpty) {
         debugPrint('[Native]   MicVAD: ${micVADSegments.length} segments: ${micVADSegments.map((s) => '${s['startTime']}s-${s['endTime']}s').join(', ')}');
+      }
+      if (sysVADSegments.isNotEmpty) {
+        debugPrint('[Native]   SysVAD: ${sysVADSegments.length} segments: ${sysVADSegments.map((s) => '${s['startTime']}s-${s['endTime']}s').join(', ')}');
       }
       if (transcription != null) {
         debugPrint('[Native]   Transcription: ${transcription['text']}');
@@ -194,6 +198,7 @@ class AppState extends ChangeNotifier {
         'endTime': endTime,
         'isFinalChunk': isFinalChunk,
         'micVADSegments': micVADSegments,
+        'sysVADSegments': sysVADSegments,
         'transcription': transcription,
         'diarizations': diarizations,
       });

@@ -31,6 +31,11 @@ final class UnifiedRecordingServiceV2 {
     private var micVADService: VADService?
     private var lastMicSegmentCount: Int = 0
 
+    // MARK: - Sys VAD (상대방이 말한 구간 추적)
+
+    private var sysVADService: VADService?
+    private var lastSysSegmentCount: Int = 0
+
     // MARK: - Chunk Buffer
 
     private var chunkBuffer: [Float] = []
@@ -144,6 +149,19 @@ final class UnifiedRecordingServiceV2 {
             throw error
         }
 
+        // Initialize Sys VAD (상대방이 말한 구간 추적용)
+        if config.enableSystemAudio {
+            do {
+                sysVADService = VADService()
+                try await sysVADService?.initialize()
+                await sysVADService?.reset()
+                lastSysSegmentCount = 0
+            } catch {
+                FlutterBridge.shared.invokeError(code: .vadInitFailed, message: error.localizedDescription)
+                throw error
+            }
+        }
+
         // Reset Diarizer (새 세션)
         if config.enableDiarization {
             await diarizerService?.reset()
@@ -209,8 +227,9 @@ final class UnifiedRecordingServiceV2 {
         // 3) 실제 녹음 길이 계산 (패딩 전)
         let totalDuration = chunkStartTime + Double(chunkBuffer.count) / sampleRate
 
-        // 4) MicVAD finalize - 진행 중인 세그먼트 종료 (endTime 설정)
+        // 4) MicVAD / SysVAD finalize - 진행 중인 세그먼트 종료 (endTime 설정)
         micVADService?.finalize()
+        sysVADService?.finalize()
         
 
         
@@ -297,6 +316,7 @@ final class UnifiedRecordingServiceV2 {
         audioFileWriter = nil
         vadService = nil
         micVADService = nil
+        sysVADService = nil
         asrService = nil
         diarizerService = nil
         onRMSUpdate = nil
@@ -364,6 +384,7 @@ final class UnifiedRecordingServiceV2 {
         audioFileWriter = nil
         vadService = nil
         micVADService = nil
+        sysVADService = nil
         asrService = nil
         diarizerService = nil
         onRMSUpdate = nil
@@ -382,6 +403,7 @@ final class UnifiedRecordingServiceV2 {
 
         let mixedStream = audioService.audioStream
         let micStream = audioService.micOnlyStream
+        let sysStream = audioService.sysOnlyStream
 
         // 두 스트림을 병렬로 처리
         await withTaskGroup(of: Void.self) { group in
@@ -429,6 +451,17 @@ final class UnifiedRecordingServiceV2 {
                 for await micBuffer in micStream {
                     if let vad = self.micVADService {
                         try? await vad.processChunk(micBuffer)
+                    }
+                }
+            }
+
+            // Sys-only stream (sysVAD 처리)
+            group.addTask { [weak self] in
+                guard let self = self else { return }
+
+                for await sysBuffer in sysStream {
+                    if let vad = self.sysVADService {
+                        try? await vad.processChunk(sysBuffer)
                     }
                 }
             }
@@ -510,12 +543,16 @@ final class UnifiedRecordingServiceV2 {
         // MicVAD 세그먼트 추출
         let micVADSegments = extractNewMicVADSegments(startTime: startTime, endTime: endTime)
 
+        // SysVAD 세그먼트 추출
+        let sysVADSegments = extractNewSysVADSegments(startTime: startTime, endTime: endTime)
+
         // Flutter로 청크 결과 전송
         sendChunkResultToFlutter(
             chunkIndex: currentChunkIndex,
             startTime: startTime,
             endTime: endTime,
             micVADSegments: micVADSegments,
+            sysVADSegments: sysVADSegments,
             transcription: chunkTranscription,
             diarizations: chunkDiarizations,
             isFinalChunk: isFinalChunk
@@ -541,6 +578,35 @@ final class UnifiedRecordingServiceV2 {
 
         // 2. 진행 중인 세그먼트: 유저가 현재 말하고 있으면
         //    청크 범위로 clamp해서 포함 (micVADSegments가 []인 문제 방지)
+        if let current = vad.getCurrentSegment(), current.endTime == nil {
+            if current.startTime <= endTime {
+                let clampedStart = max(current.startTime, startTime)
+                result.append((startTime: clampedStart, endTime: endTime))
+            }
+        }
+
+        return result
+    }
+
+    /// SysVAD에서 새로 감지된 세그먼트 추출
+    private func extractNewSysVADSegments(startTime: Double, endTime: Double) -> [(startTime: Double, endTime: Double)] {
+        guard let vad = sysVADService else { return [] }
+
+        // 1. 완료된 세그먼트
+        let allSegments = vad.getSpeechSegments()
+        let newSegments = Array(allSegments.dropFirst(lastSysSegmentCount))
+        lastSysSegmentCount = allSegments.count
+
+        var result: [(startTime: Double, endTime: Double)] = newSegments.compactMap { segment in
+            guard let end = segment.endTime else { return nil }
+            if end >= startTime && segment.startTime <= endTime {
+                return (startTime: segment.startTime, endTime: end)
+            }
+            return nil
+        }
+
+        // 2. 진행 중인 세그먼트: 상대방이 현재 말하고 있으면
+        //    청크 범위로 clamp해서 포함
         if let current = vad.getCurrentSegment(), current.endTime == nil {
             if current.startTime <= endTime {
                 let clampedStart = max(current.startTime, startTime)
@@ -601,6 +667,7 @@ final class UnifiedRecordingServiceV2 {
         startTime: Double,
         endTime: Double,
         micVADSegments: [(startTime: Double, endTime: Double)],
+        sysVADSegments: [(startTime: Double, endTime: Double)] = [],
         transcription: TranscriptionSegment?,
         diarizations: [SpeakerSegment],
         isFinalChunk: Bool = false
@@ -611,6 +678,10 @@ final class UnifiedRecordingServiceV2 {
         }
 
         let micVADData = micVADSegments.map {
+            FlutterBridge.MicVADSegmentData(startTime: $0.startTime, endTime: $0.endTime)
+        }
+
+        let sysVADData = sysVADSegments.map {
             FlutterBridge.MicVADSegmentData(startTime: $0.startTime, endTime: $0.endTime)
         }
 
@@ -640,6 +711,7 @@ final class UnifiedRecordingServiceV2 {
             startTime: startTime,
             endTime: endTime,
             micVADSegments: micVADData,
+            sysVADSegments: sysVADData,
             transcription: transcriptionData,
             diarizations: diarizationData,
             isFinalChunk: isFinalChunk,

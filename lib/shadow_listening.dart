@@ -394,6 +394,11 @@ class ShadowListening {
   ///         .map((e) => Map<String, dynamic>.from(e as Map))
   ///         .toList();
   ///
+  ///     // SysVAD segments (other person speech via system audio)
+  ///     final sysVADSegments = (args['sysVADSegments'] as List)
+  ///         .map((e) => Map<String, dynamic>.from(e as Map))
+  ///         .toList();
+  ///
   ///     // Transcription (may be null)
   ///     final transcription = args['transcription'] != null
   ///         ? Map<String, dynamic>.from(args['transcription'] as Map)

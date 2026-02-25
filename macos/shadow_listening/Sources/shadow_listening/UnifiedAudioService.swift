@@ -45,6 +45,10 @@ final class UnifiedAudioService: AudioListenable {
     private var micOnlyContinuation: AsyncStream<AVAudioPCMBuffer>.Continuation?
     private var _micOnlyStream: AsyncStream<AVAudioPCMBuffer>?
 
+    // Sys-only stream (sysVAD용)
+    private var sysOnlyContinuation: AsyncStream<AVAudioPCMBuffer>.Continuation?
+    private var _sysOnlyStream: AsyncStream<AVAudioPCMBuffer>?
+
     var audioStream: AsyncStream<AVAudioPCMBuffer> {
         if let existing = _audioStream {
             return existing
@@ -71,6 +75,21 @@ final class UnifiedAudioService: AudioListenable {
             }
         }
         _micOnlyStream = stream
+        return stream
+    }
+
+    /// Sys-only 16kHz stream (믹싱 전, sysVAD용)
+    var sysOnlyStream: AsyncStream<AVAudioPCMBuffer> {
+        if let existing = _sysOnlyStream {
+            return existing
+        }
+        let stream = AsyncStream<AVAudioPCMBuffer> { [weak self] continuation in
+            self?.sysOnlyContinuation = continuation
+            continuation.onTermination = { @Sendable _ in
+                // Stream terminated
+            }
+        }
+        _sysOnlyStream = stream
         return stream
     }
 
@@ -120,6 +139,9 @@ final class UnifiedAudioService: AudioListenable {
 
     /// Mic-only 리샘플러 (48kHz → 16kHz)
     private var micOnlyResampleConverter: AVAudioConverter?
+
+    /// Sys-only 리샘플러 (48kHz → 16kHz)
+    private var sysOnlyResampleConverter: AVAudioConverter?
 
     // MARK: - Logging
 
@@ -176,10 +198,15 @@ final class UnifiedAudioService: AudioListenable {
         micOnlyContinuation = nil
         _micOnlyStream = nil
 
+        sysOnlyContinuation?.finish()
+        sysOnlyContinuation = nil
+        _sysOnlyStream = nil
+
         captureFloatFormat = nil
         outputFormat = nil
         resampleConverter = nil
         micOnlyResampleConverter = nil
+        sysOnlyResampleConverter = nil
 
         state = .stopped
         logger.info("UnifiedAudioService stopped")
@@ -243,7 +270,13 @@ final class UnifiedAudioService: AudioListenable {
         }
         self.micOnlyResampleConverter = micOnlyConverter
 
-        logger.info("Resampling configured: \(self.captureSampleRate)Hz -> \(self.outputSampleRate)Hz (mixed + micOnly)")
+        // Sys-only resampler (48kHz -> 16kHz) - 별도 인스턴스로 독립적 상태 유지
+        guard let sysOnlyConverter = AVAudioConverter(from: floatFormat, to: outFormat) else {
+            throw AudioServiceError.audioUnitInitializationFailed(-1)
+        }
+        self.sysOnlyResampleConverter = sysOnlyConverter
+
+        logger.info("Resampling configured: \(self.captureSampleRate)Hz -> \(self.outputSampleRate)Hz (mixed + micOnly + sysOnly)")
     }
 
     // MARK: - Mic Audio Setup (VoiceProcessingIO)
@@ -792,10 +825,56 @@ final class UnifiedAudioService: AudioListenable {
             }
         }
 
-        // Mix with system audio at 48kHz
+        // Read system audio from ring buffer ONCE (before mixing)
+        let frameCount = Int(inNumberFrames)
+        let sysAudioSamples = UnsafeMutablePointer<Float>.allocate(capacity: frameCount)
+        defer { sysAudioSamples.deallocate() }
+        let sysReadCount = enableSystemAudioMixing ? systemRingBuffer.read(sysAudioSamples, count: frameCount) : 0
+
+        // Sys-only 16kHz 출력 (sysVAD용) - 믹싱 전에 처리
+        if sysReadCount > 0, let sysOnlyConverter = sysOnlyResampleConverter {
+            let sysOnlyOutputFrameCount = AVAudioFrameCount(Double(inNumberFrames) * ratio)
+
+            if let sysOnlyResampledBuffer = AVAudioPCMBuffer(
+                pcmFormat: outputFormat,
+                frameCapacity: sysOnlyOutputFrameCount
+            ) {
+                // 48kHz Float32 버퍼에 시스템 오디오 복사
+                guard let sysFloatBuffer = AVAudioPCMBuffer(
+                    pcmFormat: floatFormat,
+                    frameCapacity: inNumberFrames
+                ) else { return }
+                sysFloatBuffer.frameLength = inNumberFrames
+
+                if let sysFloatPtr = sysFloatBuffer.floatChannelData?[0] {
+                    for i in 0..<frameCount {
+                        sysFloatPtr[i] = (i < sysReadCount) ? sysAudioSamples[i] : 0.0
+                    }
+                }
+
+                var sysOnlyError: NSError?
+                var sysOnlyHasData = true
+                let sysOnlyStatus = sysOnlyConverter.convert(to: sysOnlyResampledBuffer, error: &sysOnlyError) { _, outStatus in
+                    if sysOnlyHasData {
+                        sysOnlyHasData = false
+                        outStatus.pointee = .haveData
+                        return sysFloatBuffer
+                    } else {
+                        outStatus.pointee = .noDataNow
+                        return nil
+                    }
+                }
+
+                if sysOnlyStatus != .error, sysOnlyError == nil, sysOnlyResampledBuffer.frameLength > 0 {
+                    sysOnlyContinuation?.yield(sysOnlyResampledBuffer)
+                }
+            }
+        }
+
+        // Mix with system audio at 48kHz (using pre-read samples)
         let mixedFloatBuffer: AVAudioPCMBuffer
         if enableSystemAudioMixing {
-            guard let mixed = mixWithSystemAudio(micBuffer: micFloatBuffer) else { return }
+            guard let mixed = mixWithPrereadSystemAudio(micBuffer: micFloatBuffer, systemSamples: sysAudioSamples, readCount: sysReadCount) else { return }
             mixedFloatBuffer = mixed
         } else {
             mixedFloatBuffer = micFloatBuffer
@@ -855,14 +934,13 @@ final class UnifiedAudioService: AudioListenable {
         continuation?.yield(resampledBuffer)
     }
 
-    /// Mix mic buffer with system audio from RingBuffer at 48kHz
-    private func mixWithSystemAudio(micBuffer: AVAudioPCMBuffer) -> AVAudioPCMBuffer? {
+    /// Mix mic buffer with pre-read system audio samples at 48kHz
+    private func mixWithPrereadSystemAudio(micBuffer: AVAudioPCMBuffer, systemSamples: UnsafePointer<Float>, readCount: Int) -> AVAudioPCMBuffer? {
         guard let micData = micBuffer.floatChannelData?[0],
               let floatFormat = captureFloatFormat else { return nil }
 
         let frameCount = Int(micBuffer.frameLength)
 
-        // Create output buffer
         guard let outputBuffer = AVAudioPCMBuffer(
             pcmFormat: floatFormat,
             frameCapacity: AVAudioFrameCount(frameCount)
@@ -871,20 +949,13 @@ final class UnifiedAudioService: AudioListenable {
 
         guard let outputData = outputBuffer.floatChannelData?[0] else { return nil }
 
-        // Read system audio (same frame count as mic)
-        let sysAudioSamples = UnsafeMutablePointer<Float>.allocate(capacity: frameCount)
-        defer { sysAudioSamples.deallocate() }
-
-        let readCount = systemRingBuffer.read(sysAudioSamples, count: frameCount)
-
-        // Mix
         if readCount > 0 {
             for i in 0..<frameCount {
-                let mixed = micData[i] * micGain + sysAudioSamples[i] * sysGain
+                let sysVal = (i < readCount) ? systemSamples[i] : Float(0.0)
+                let mixed = micData[i] * micGain + sysVal * sysGain
                 outputData[i] = max(-1.0, min(1.0, mixed))
             }
         } else {
-            // No system audio - passthrough mic only
             for i in 0..<frameCount {
                 outputData[i] = max(-1.0, min(1.0, micData[i] * micGain))
             }

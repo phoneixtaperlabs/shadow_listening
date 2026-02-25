@@ -130,6 +130,7 @@ final class FlutterBridge {
         startTime: Double,
         endTime: Double,
         micVADSegments: [MicVADSegmentData],
+        sysVADSegments: [MicVADSegmentData] = [],
         transcription: TranscriptionData?,
         diarizations: [DiarizationData],
         isFinalChunk: Bool = false,
@@ -140,6 +141,7 @@ final class FlutterBridge {
             "startTime": startTime,
             "endTime": endTime,
             "micVADSegments": micVADSegments.map { $0.toDictionary() },
+            "sysVADSegments": sysVADSegments.map { $0.toDictionary() },
             "diarizations": diarizations.map { $0.toDictionary() },
             "isFinalChunk": isFinalChunk
         ]
@@ -154,7 +156,7 @@ final class FlutterBridge {
 
         invokeMethod("onChunkProcessed", arguments: arguments)
 
-        logger.info("[FlutterBridge] onChunkProcessed: chunk#\(chunkIndex) (\(String(format: "%.1f", startTime))s-\(String(format: "%.1f", endTime))s) - MicVAD:\(micVADSegments.count), Trans:\(transcription != nil ? 1 : 0), Diar:\(diarizations.count), final:\(isFinalChunk)")
+        logger.info("[FlutterBridge] onChunkProcessed: chunk#\(chunkIndex) (\(String(format: "%.1f", startTime))s-\(String(format: "%.1f", endTime))s) - MicVAD:\(micVADSegments.count), SysVAD:\(sysVADSegments.count), Trans:\(transcription != nil ? 1 : 0), Diar:\(diarizations.count), final:\(isFinalChunk)")
     }
 
     // MARK: - Window Events
