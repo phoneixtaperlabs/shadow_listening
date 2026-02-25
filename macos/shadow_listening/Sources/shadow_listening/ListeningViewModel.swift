@@ -292,8 +292,9 @@ final class ListeningViewModel: ObservableObject {
         logger.info("리스닝 상태 전환 — 녹음은 Coordinator에서 이미 진행 중")
     }
 
-    /// 리스닝 상태 완전 정리
-    private func cleanupListeningState() {
+    /// 리스닝 UI 상태 정리 (타이머, 상태 리셋)
+    /// 비즈니스 로직(녹음 중지/취소)은 포함하지 않음 — Plugin handler에서 처리
+    func cleanupListeningState() {
         countdownTimer?.invalidate()
         countdownTimer = nil
         listeningState = .idle

@@ -133,9 +133,19 @@ class AppState extends ChangeNotifier {
       final windowId = data['windowId'] as String;
       debugPrint('[Native] Listening ended: reason=$reason, windowId=$windowId');
 
-      // ControlBar에서 cancel/confirm 시 Flutter 측 상태도 업데이트
-      isListening = false;
-      permissionResult = 'Listening ended ($reason)';
+      // Native UI only notifies intent; Flutter drives the actual business logic.
+      if (reason == 'confirmed') {
+        final result = await _plugin.stopListening();
+        isListening = false;
+        listeningResult = result;
+        permissionResult = result != null
+            ? 'Listening complete: ${(result['transcriptions'] as List?)?.length ?? 0} transcriptions'
+            : 'Listening stopped (no results)';
+      } else {
+        await _plugin.cancelListening();
+        isListening = false;
+        permissionResult = 'Listening cancelled';
+      }
 
       windowEvents.insert(0, {'event': 'listeningEnded', 'reason': reason, 'windowId': windowId, 'timestamp': DateTime.now().toIso8601String()});
       if (windowEvents.length > 20) windowEvents.removeLast();

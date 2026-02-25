@@ -171,19 +171,17 @@ struct ListeningControlBar: View {
         showCancelConfirmation = true
     }
 
-    /// 리스닝 취소 실행
+    /// 리스닝 취소 — Flutter에 알림만 전송, 비즈니스 로직은 Flutter에서 처리
     private func performCancel() {
         logger.info("리스닝 취소 실행")
-        viewModel.cancelListening()
+        viewModel.cleanupListeningState()
         FlutterBridge.shared.invokeListeningEnded(reason: "cancelled")
-        WindowManager.shared.closeWindow(identifier: "listening")
     }
 
-    /// 리스닝 확인 (완료) 실행
+    /// 리스닝 확인 (완료) — Flutter에 알림만 전송, 비즈니스 로직은 Flutter에서 처리
     private func performConfirm() {
         logger.info("리스닝 확인 실행")
-        viewModel.stopListening()
+        viewModel.cleanupListeningState()
         FlutterBridge.shared.invokeListeningEnded(reason: "confirmed")
-        WindowManager.shared.closeWindow(identifier: "listening")
     }
 }
