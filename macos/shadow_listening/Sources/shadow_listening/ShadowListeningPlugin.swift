@@ -1200,13 +1200,13 @@ public class ShadowListeningPlugin: NSObject, FlutterPlugin {
 
     case "stopListening":
       Task.detached {
+        await MainActor.run {
+          WindowManager.shared.closeWindow(identifier: "listening")
+        }
+
         var recordingResult: UnifiedRecordingResult?
         if #available(macOS 14.0, *) {
           recordingResult = await ListeningCoordinator.shared.stopRecording()
-        }
-
-        await MainActor.run {
-          WindowManager.shared.closeWindow(identifier: "listening")
         }
 
         if let recordingResult {
@@ -1218,12 +1218,12 @@ public class ShadowListeningPlugin: NSObject, FlutterPlugin {
 
     case "cancelListening":
       Task.detached {
-        if #available(macOS 14.0, *) {
-          await ListeningCoordinator.shared.cancelRecording()
-        }
-
         await MainActor.run {
           WindowManager.shared.closeWindow(identifier: "listening")
+        }
+
+        if #available(macOS 14.0, *) {
+          await ListeningCoordinator.shared.cancelRecording()
         }
 
         DispatchQueue.main.async { result(nil) }
