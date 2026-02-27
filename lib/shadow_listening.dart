@@ -150,27 +150,18 @@ class ShadowListening {
   ///
   /// Does not affect any currently loaded models.
   ///
-  /// [asr] Whether to prewarm the ASR model (default: true)
+  /// [asr] Whether to prewarm ASR models (default: true)
   /// [diarization] Whether to prewarm the diarization model (default: true)
   /// [vad] Whether to prewarm the VAD model (default: true)
-  /// [asrEngine] ASR engine to prewarm: 'whisper' or 'fluid' (default: 'fluid')
+  /// [asrEngine] null = prewarm both Whisper and Parakeet (default),
+  ///   'whisper' = Whisper only, 'parakeet' = Parakeet only
   ///
   /// Returns a map indicating per-model success/failure:
   /// ```dart
-  /// {'asr': true, 'diarization': true, 'vad': false}
+  /// {'whisper': true, 'parakeet': true, 'diarization': true, 'vad': true}
   /// ```
-  Future<Map<String, bool>> preWarmModels({
-    bool asr = true,
-    bool diarization = true,
-    bool vad = true,
-    String asrEngine = 'fluid',
-  }) {
-    return ShadowListeningPlatform.instance.preWarmModels(
-      asr: asr,
-      diarization: diarization,
-      vad: vad,
-      asrEngine: asrEngine,
-    );
+  Future<Map<String, bool>> preWarmModels({bool asr = true, bool diarization = true, bool vad = true, String? asrEngine}) {
+    return ShadowListeningPlatform.instance.preWarmModels(asr: asr, diarization: diarization, vad: vad, asrEngine: asrEngine);
   }
 
   // MARK: - Recording with Transcription
@@ -178,8 +169,7 @@ class ShadowListening {
   /// [asrEngine] can be 'whisper' or 'fluid' (default)
   /// Returns file path on success, null on failure
   Future<String?> startRecordingWithTranscription({String? asrEngine}) {
-    return ShadowListeningPlatform.instance
-        .startRecordingWithTranscription(asrEngine: asrEngine);
+    return ShadowListeningPlatform.instance.startRecordingWithTranscription(asrEngine: asrEngine);
   }
 
   /// Stop recording and get transcription results
@@ -277,8 +267,7 @@ class ShadowListening {
   /// final result = await shadowListening.stopRecordingWithDiarization();
   /// ```
   Future<String?> startRecordingWithDiarization({double chunkDuration = 5.0}) {
-    return ShadowListeningPlatform.instance
-        .startRecordingWithDiarization(chunkDuration: chunkDuration);
+    return ShadowListeningPlatform.instance.startRecordingWithDiarization(chunkDuration: chunkDuration);
   }
 
   /// Stop recording and get accumulated diarization results
@@ -339,16 +328,8 @@ class ShadowListening {
   ///   print('Speaker count: ${result['speakerCount']}');
   /// }
   /// ```
-  Future<String?> startUnifiedRecording({
-    bool enableASR = true,
-    bool enableDiarization = true,
-    String asrEngine = 'fluid',
-  }) {
-    return ShadowListeningPlatform.instance.startUnifiedRecording(
-      enableASR: enableASR,
-      enableDiarization: enableDiarization,
-      asrEngine: asrEngine,
-    );
+  Future<String?> startUnifiedRecording({bool enableASR = true, bool enableDiarization = true, String asrEngine = 'fluid'}) {
+    return ShadowListeningPlatform.instance.startUnifiedRecording(enableASR: enableASR, enableDiarization: enableDiarization, asrEngine: asrEngine);
   }
 
   /// Stop unified recording and get all results
@@ -552,14 +533,8 @@ class ShadowListening {
   ///
   /// [identifier] The window identifier to update (default: 'default')
   /// [position] New position preset
-  Future<void> updateWindowPosition({
-    String identifier = 'default',
-    required String position,
-  }) {
-    return ShadowListeningPlatform.instance.updateWindowPosition(
-      identifier: identifier,
-      position: position,
-    );
+  Future<void> updateWindowPosition({String identifier = 'default', required String position}) {
+    return ShadowListeningPlatform.instance.updateWindowPosition(identifier: identifier, position: position);
   }
 
   /// Get list of all active window identifiers

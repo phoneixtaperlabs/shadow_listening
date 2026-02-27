@@ -40,7 +40,7 @@ final class UnifiedRecordingServiceV2 {
 
     private var chunkBuffer: [Float] = []
     private var chunkStartTime: Double = 0
-    private let chunkDuration: Double = 5.0  // 5초 청크
+    private let chunkDuration: Double = 10.0  // 10초 청크
     private let minChunkDuration: Double = 3.0  // 최소 3초
     private let sampleRate: Double = 16000
 
@@ -79,7 +79,7 @@ final class UnifiedRecordingServiceV2 {
         var enableDiarization: Bool = true
         var enableSystemAudio: Bool = true
         var asrEngine: String = "fluid"
-        var chunkDuration: Double = 5.0
+        var chunkDuration: Double = 10.0
         var sessionId: String?
     }
 

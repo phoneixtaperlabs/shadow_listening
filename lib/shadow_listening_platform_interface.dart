@@ -148,12 +148,7 @@ abstract class ShadowListeningPlatform extends PlatformInterface {
   }
 
   // MARK: - Model Prewarming
-  Future<Map<String, bool>> preWarmModels({
-    bool asr = true,
-    bool diarization = true,
-    bool vad = true,
-    String asrEngine = 'fluid',
-  }) {
+  Future<Map<String, bool>> preWarmModels({bool asr = true, bool diarization = true, bool vad = true, String? asrEngine}) {
     throw UnimplementedError('preWarmModels() has not been implemented.');
   }
 
@@ -207,11 +202,7 @@ abstract class ShadowListeningPlatform extends PlatformInterface {
   }
 
   // MARK: - Unified Recording (ASR + Diarization)
-  Future<String?> startUnifiedRecording({
-    bool enableASR = true,
-    bool enableDiarization = true,
-    String asrEngine = 'fluid',
-  }) {
+  Future<String?> startUnifiedRecording({bool enableASR = true, bool enableDiarization = true, String asrEngine = 'fluid'}) {
     throw UnimplementedError('startUnifiedRecording() has not been implemented.');
   }
 
@@ -290,10 +281,7 @@ abstract class ShadowListeningPlatform extends PlatformInterface {
     throw UnimplementedError('isWindowVisible() has not been implemented.');
   }
 
-  Future<void> updateWindowPosition({
-    String identifier = 'default',
-    required String position,
-  }) {
+  Future<void> updateWindowPosition({String identifier = 'default', required String position}) {
     throw UnimplementedError('updateWindowPosition() has not been implemented.');
   }
 

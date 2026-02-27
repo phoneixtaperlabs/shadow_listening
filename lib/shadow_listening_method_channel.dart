@@ -138,10 +138,7 @@ class MethodChannelShadowListening extends ShadowListeningPlatform {
   // MARK: - Whisper ASR Model Management
   @override
   Future<bool> loadWhisperModel({String? modelName}) async {
-    final success = await methodChannel.invokeMethod<bool>(
-      'loadWhisperModel',
-      {'modelName': modelName},
-    );
+    final success = await methodChannel.invokeMethod<bool>('loadWhisperModel', {'modelName': modelName});
     return success ?? false;
   }
 
@@ -166,10 +163,7 @@ class MethodChannelShadowListening extends ShadowListeningPlatform {
   // MARK: - Fluid ASR Model Management
   @override
   Future<bool> loadFluidModel({String? version}) async {
-    final success = await methodChannel.invokeMethod<bool>(
-      'loadFluidModel',
-      {'version': version},
-    );
+    final success = await methodChannel.invokeMethod<bool>('loadFluidModel', {'version': version});
     return success ?? false;
   }
 
@@ -193,36 +187,23 @@ class MethodChannelShadowListening extends ShadowListeningPlatform {
 
   // MARK: - Model Prewarming
   @override
-  Future<Map<String, bool>> preWarmModels({
-    bool asr = true,
-    bool diarization = true,
-    bool vad = true,
-    String asrEngine = 'fluid',
-  }) async {
-    final resultMap = await methodChannel.invokeMethod<Map<Object?, Object?>>(
-      'preWarmModels',
-      {
-        'asr': asr,
-        'diarization': diarization,
-        'vad': vad,
-        'asrEngine': asrEngine,
-      },
-    );
+  Future<Map<String, bool>> preWarmModels({bool asr = true, bool diarization = true, bool vad = true, String? asrEngine}) async {
+    final resultMap = await methodChannel.invokeMethod<Map<Object?, Object?>>('preWarmModels', {
+      'asr': asr,
+      'diarization': diarization,
+      'vad': vad,
+      if (asrEngine != null) 'asrEngine': asrEngine,
+    });
     if (resultMap == null) {
       return {'asr': false, 'diarization': false, 'vad': false};
     }
-    return resultMap.map(
-      (key, value) => MapEntry(key.toString(), value as bool? ?? false),
-    );
+    return resultMap.map((key, value) => MapEntry(key.toString(), value as bool? ?? false));
   }
 
   // MARK: - Recording with Transcription
   @override
   Future<String?> startRecordingWithTranscription({String? asrEngine}) async {
-    final filePath = await methodChannel.invokeMethod<String>(
-      'startRecordingWithTranscription',
-      {'asrEngine': asrEngine ?? 'fluid'},
-    );
+    final filePath = await methodChannel.invokeMethod<String>('startRecordingWithTranscription', {'asrEngine': asrEngine ?? 'fluid'});
     return filePath;
   }
 
@@ -266,16 +247,11 @@ class MethodChannelShadowListening extends ShadowListeningPlatform {
   // MARK: - Diarization Processing
   @override
   Future<Map<String, dynamic>?> processDiarization(String audioFilePath) async {
-    final result = await methodChannel.invokeMethod<Map<Object?, Object?>>(
-      'processDiarization',
-      {'audioFilePath': audioFilePath},
-    );
+    final result = await methodChannel.invokeMethod<Map<Object?, Object?>>('processDiarization', {'audioFilePath': audioFilePath});
     if (result == null) return null;
 
     // Convert nested segments list
-    final segments = (result['segments'] as List<Object?>?)
-        ?.map((e) => Map<String, dynamic>.from(e as Map))
-        .toList();
+    final segments = (result['segments'] as List<Object?>?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList();
 
     return {
       'segments': segments,
@@ -294,23 +270,16 @@ class MethodChannelShadowListening extends ShadowListeningPlatform {
   // MARK: - Streaming Diarization
   @override
   Future<String?> startRecordingWithDiarization({double chunkDuration = 5.0}) async {
-    final filePath = await methodChannel.invokeMethod<String>(
-      'startRecordingWithDiarization',
-      {'chunkDuration': chunkDuration},
-    );
+    final filePath = await methodChannel.invokeMethod<String>('startRecordingWithDiarization', {'chunkDuration': chunkDuration});
     return filePath;
   }
 
   @override
   Future<Map<String, dynamic>?> stopRecordingWithDiarization() async {
-    final result = await methodChannel.invokeMethod<Map<Object?, Object?>>(
-      'stopRecordingWithDiarization',
-    );
+    final result = await methodChannel.invokeMethod<Map<Object?, Object?>>('stopRecordingWithDiarization');
     if (result == null) return null;
 
-    final segments = (result['segments'] as List<Object?>?)
-        ?.map((e) => Map<String, dynamic>.from(e as Map))
-        .toList();
+    final segments = (result['segments'] as List<Object?>?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList();
 
     return {
       'segments': segments,
@@ -322,36 +291,23 @@ class MethodChannelShadowListening extends ShadowListeningPlatform {
 
   // MARK: - Unified Recording (ASR + Diarization)
   @override
-  Future<String?> startUnifiedRecording({
-    bool enableASR = true,
-    bool enableDiarization = true,
-    String asrEngine = 'fluid',
-  }) async {
-    final filePath = await methodChannel.invokeMethod<String>(
-      'startUnifiedRecording',
-      {
-        'enableASR': enableASR,
-        'enableDiarization': enableDiarization,
-        'asrEngine': asrEngine,
-      },
-    );
+  Future<String?> startUnifiedRecording({bool enableASR = true, bool enableDiarization = true, String asrEngine = 'fluid'}) async {
+    final filePath = await methodChannel.invokeMethod<String>('startUnifiedRecording', {
+      'enableASR': enableASR,
+      'enableDiarization': enableDiarization,
+      'asrEngine': asrEngine,
+    });
     return filePath;
   }
 
   @override
   Future<Map<String, dynamic>?> stopUnifiedRecording() async {
-    final result = await methodChannel.invokeMethod<Map<Object?, Object?>>(
-      'stopUnifiedRecording',
-    );
+    final result = await methodChannel.invokeMethod<Map<Object?, Object?>>('stopUnifiedRecording');
     if (result == null) return null;
 
-    final transcriptions = (result['transcriptions'] as List<Object?>?)
-        ?.map((e) => Map<String, dynamic>.from(e as Map))
-        .toList();
+    final transcriptions = (result['transcriptions'] as List<Object?>?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList();
 
-    final speakerSegments = (result['speakerSegments'] as List<Object?>?)
-        ?.map((e) => Map<String, dynamic>.from(e as Map))
-        .toList();
+    final speakerSegments = (result['speakerSegments'] as List<Object?>?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList();
 
     return {
       'audioFilePath': result['audioFilePath'],
@@ -385,33 +341,24 @@ class MethodChannelShadowListening extends ShadowListeningPlatform {
     String? sessionId,
     bool shouldScreenshotCapture = false,
   }) async {
-    final success = await methodChannel.invokeMethod<bool>(
-      'startListening',
-      {
-        'enableASR': enableASR,
-        'enableDiarization': enableDiarization,
-        'asrEngine': asrEngine,
-        'shouldScreenshotCapture': shouldScreenshotCapture,
-        if (sessionId != null) 'sessionId': sessionId,
-      },
-    );
+    final success = await methodChannel.invokeMethod<bool>('startListening', {
+      'enableASR': enableASR,
+      'enableDiarization': enableDiarization,
+      'asrEngine': asrEngine,
+      'shouldScreenshotCapture': shouldScreenshotCapture,
+      if (sessionId != null) 'sessionId': sessionId,
+    });
     return success ?? false;
   }
 
   @override
   Future<Map<String, dynamic>?> stopListening() async {
-    final result = await methodChannel.invokeMethod<Map<Object?, Object?>>(
-      'stopListening',
-    );
+    final result = await methodChannel.invokeMethod<Map<Object?, Object?>>('stopListening');
     if (result == null) return null;
 
-    final transcriptions = (result['transcriptions'] as List<Object?>?)
-        ?.map((e) => Map<String, dynamic>.from(e as Map))
-        .toList();
+    final transcriptions = (result['transcriptions'] as List<Object?>?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList();
 
-    final speakerSegments = (result['speakerSegments'] as List<Object?>?)
-        ?.map((e) => Map<String, dynamic>.from(e as Map))
-        .toList();
+    final speakerSegments = (result['speakerSegments'] as List<Object?>?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList();
 
     return {
       'audioFilePath': result['audioFilePath'],
@@ -452,50 +399,32 @@ class MethodChannelShadowListening extends ShadowListeningPlatform {
     double? offsetX,
     double? offsetY,
   }) async {
-    final success = await methodChannel.invokeMethod<bool>(
-      'showWindow',
-      {
-        'identifier': identifier,
-        'width': width,
-        'height': height,
-        'position': position,
-        if (anchor != null) 'anchor': anchor,
-        if (offsetX != null) 'offsetX': offsetX,
-        if (offsetY != null) 'offsetY': offsetY,
-      },
-    );
+    final success = await methodChannel.invokeMethod<bool>('showWindow', {
+      'identifier': identifier,
+      'width': width,
+      'height': height,
+      'position': position,
+      if (anchor != null) 'anchor': anchor,
+      if (offsetX != null) 'offsetX': offsetX,
+      if (offsetY != null) 'offsetY': offsetY,
+    });
     return success ?? false;
   }
 
   @override
   Future<void> closeWindow({String identifier = 'default'}) async {
-    await methodChannel.invokeMethod<void>(
-      'closeWindow',
-      {'identifier': identifier},
-    );
+    await methodChannel.invokeMethod<void>('closeWindow', {'identifier': identifier});
   }
 
   @override
   Future<bool> isWindowVisible({String identifier = 'default'}) async {
-    final visible = await methodChannel.invokeMethod<bool>(
-      'isWindowVisible',
-      {'identifier': identifier},
-    );
+    final visible = await methodChannel.invokeMethod<bool>('isWindowVisible', {'identifier': identifier});
     return visible ?? false;
   }
 
   @override
-  Future<void> updateWindowPosition({
-    String identifier = 'default',
-    required String position,
-  }) async {
-    await methodChannel.invokeMethod<void>(
-      'updateWindowPosition',
-      {
-        'identifier': identifier,
-        'position': position,
-      },
-    );
+  Future<void> updateWindowPosition({String identifier = 'default', required String position}) async {
+    await methodChannel.invokeMethod<void>('updateWindowPosition', {'identifier': identifier, 'position': position});
   }
 
   @override
@@ -512,18 +441,11 @@ class MethodChannelShadowListening extends ShadowListeningPlatform {
     final result = await methodChannel.invokeMethod<Map<Object?, Object?>>('enumerateWindows');
     if (result == null) return {'windows': [], 'displays': []};
 
-    final windows = (result['windows'] as List<Object?>?)
-        ?.map((e) => Map<String, dynamic>.from(e as Map))
-        .toList() ?? [];
+    final windows = (result['windows'] as List<Object?>?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? [];
 
-    final displays = (result['displays'] as List<Object?>?)
-        ?.map((e) => Map<String, dynamic>.from(e as Map))
-        .toList() ?? [];
+    final displays = (result['displays'] as List<Object?>?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? [];
 
-    return {
-      'windows': windows,
-      'displays': displays,
-    };
+    return {'windows': windows, 'displays': displays};
   }
 
   @override

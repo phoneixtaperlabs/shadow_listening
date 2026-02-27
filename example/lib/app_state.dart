@@ -138,9 +138,10 @@ class AppState extends ChangeNotifier {
         final result = await _plugin.stopListening();
         isListening = false;
         listeningResult = result;
-        permissionResult = result != null
-            ? 'Listening complete: ${(result['transcriptions'] as List?)?.length ?? 0} transcriptions'
-            : 'Listening stopped (no results)';
+        permissionResult =
+            result != null
+                ? 'Listening complete: ${(result['transcriptions'] as List?)?.length ?? 0} transcriptions'
+                : 'Listening stopped (no results)';
       } else {
         await _plugin.cancelListening();
         isListening = false;
@@ -178,10 +179,14 @@ class AppState extends ChangeNotifier {
 
       debugPrint('[Native] Chunk #$chunkIndex: ${startTime}s - ${endTime}s${isFinalChunk ? ' (FINAL)' : ''}');
       if (micVADSegments.isNotEmpty) {
-        debugPrint('[Native]   MicVAD: ${micVADSegments.length} segments: ${micVADSegments.map((s) => '${s['startTime']}s-${s['endTime']}s').join(', ')}');
+        debugPrint(
+          '[Native]   MicVAD: ${micVADSegments.length} segments: ${micVADSegments.map((s) => '${s['startTime']}s-${s['endTime']}s').join(', ')}',
+        );
       }
       if (sysVADSegments.isNotEmpty) {
-        debugPrint('[Native]   SysVAD: ${sysVADSegments.length} segments: ${sysVADSegments.map((s) => '${s['startTime']}s-${s['endTime']}s').join(', ')}');
+        debugPrint(
+          '[Native]   SysVAD: ${sysVADSegments.length} segments: ${sysVADSegments.map((s) => '${s['startTime']}s-${s['endTime']}s').join(', ')}',
+        );
       }
       if (transcription != null) {
         debugPrint('[Native]   Transcription: ${transcription['text']}');
@@ -463,13 +468,14 @@ class AppState extends ChangeNotifier {
   }
 
   // Model Prewarming
-  Future<void> preWarmModels({bool asr = true, bool diarization = true, bool vad = true, String asrEngine = 'fluid'}) async {
+  Future<void> preWarmModels({bool asr = true, bool diarization = true, bool vad = true, String? asrEngine}) async {
     isPreWarming = true;
     preWarmResult = null;
     permissionResult = 'Pre-warming models...';
     notifyListeners();
 
     final result = await _plugin.preWarmModels(asr: asr, diarization: diarization, vad: vad, asrEngine: asrEngine);
+    debugPrint("$result");
 
     isPreWarming = false;
     preWarmResult = result;

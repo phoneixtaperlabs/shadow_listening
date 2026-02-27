@@ -502,7 +502,7 @@ public class ShadowListeningPlugin: NSObject, FlutterPlugin {
       Task.detached { [weak self] in
         guard let self = self else {
           DispatchQueue.main.async {
-            result(["asr": false, "diarization": false, "vad": false] as [String: Bool])
+            result(["whisper": false, "parakeet": false, "diarization": false, "vad": false] as [String: Bool])
           }
           return
         }
@@ -511,7 +511,7 @@ public class ShadowListeningPlugin: NSObject, FlutterPlugin {
         let warmASR = args?["asr"] as? Bool ?? true
         let warmDiarization = args?["diarization"] as? Bool ?? true
         let warmVAD = args?["vad"] as? Bool ?? true
-        let asrEngine = args?["asrEngine"] as? String ?? "fluid"
+        let asrEngine = args?["asrEngine"] as? String
 
         var results: [String: Bool] = [:]
 
@@ -530,9 +530,13 @@ public class ShadowListeningPlugin: NSObject, FlutterPlugin {
         }
 
         // Pre-warm ASR (using temporary instance)
+        // nil → prewarm both, "whisper" → whisper only, "parakeet"/"fluid" → parakeet only
         if warmASR {
-          do {
-            if asrEngine == "whisper" {
+          let warmWhisper = asrEngine == nil || asrEngine == "whisper"
+          let warmParakeet = asrEngine == nil || asrEngine == "parakeet" || asrEngine == "fluid"
+
+          if warmWhisper {
+            do {
               let tempWhisper = WhisperASRService(
                 modelName: "ggml-large-v3-turbo-q5_0.bin",
                 useGPU: true,
@@ -541,18 +545,24 @@ public class ShadowListeningPlugin: NSObject, FlutterPlugin {
               try await tempWhisper.initialize()
               tempWhisper.cleanup()
               self.logger.info("[PreWarm] Whisper ASR prewarmed successfully")
-            } else {
-              let versionStr = args?["asrVersion"] as? String ?? "v2"
-              let version: FluidASRService.ModelVersion = versionStr == "v3" ? .multilingual : .english
-              let tempFluid = FluidASRService(version: version)
+              results["whisper"] = true
+            } catch {
+              self.logger.error("[PreWarm] Whisper ASR prewarm failed: \(error.localizedDescription)")
+              results["whisper"] = false
+            }
+          }
+
+          if warmParakeet {
+            do {
+              let tempFluid = FluidASRService(version: .english)
               try await tempFluid.initialize()
               tempFluid.cleanup()
-              self.logger.info("[PreWarm] Fluid ASR prewarmed successfully")
+              self.logger.info("[PreWarm] Parakeet ASR prewarmed successfully")
+              results["parakeet"] = true
+            } catch {
+              self.logger.error("[PreWarm] Parakeet ASR prewarm failed: \(error.localizedDescription)")
+              results["parakeet"] = false
             }
-            results["asr"] = true
-          } catch {
-            self.logger.error("[PreWarm] ASR prewarm failed: \(error.localizedDescription)")
-            results["asr"] = false
           }
         }
 
