@@ -155,13 +155,27 @@ class ShadowListening {
   /// [vad] Whether to prewarm the VAD model (default: true)
   /// [asrEngine] null = prewarm both Whisper and Parakeet (default),
   ///   'whisper' = Whisper only, 'parakeet' = Parakeet only
+  /// [whisperModels] Which Whisper models to prewarm (default: ['largeTurbo']).
+  ///   Accepted values: 'largeTurbo', 'medium', 'small'
   ///
   /// Returns a map indicating per-model success/failure:
   /// ```dart
-  /// {'whisper': true, 'parakeet': true, 'diarization': true, 'vad': true}
+  /// {'whisper:largeTurbo': true, 'parakeet': true, 'diarization': true, 'vad': true}
   /// ```
-  Future<Map<String, bool>> preWarmModels({bool asr = true, bool diarization = true, bool vad = true, String? asrEngine}) {
-    return ShadowListeningPlatform.instance.preWarmModels(asr: asr, diarization: diarization, vad: vad, asrEngine: asrEngine);
+  Future<Map<String, bool>> preWarmModels({
+    bool asr = true,
+    bool diarization = true,
+    bool vad = true,
+    String? asrEngine,
+    List<String>? whisperModels,
+  }) {
+    return ShadowListeningPlatform.instance.preWarmModels(
+      asr: asr,
+      diarization: diarization,
+      vad: vad,
+      asrEngine: asrEngine,
+      whisperModels: whisperModels,
+    );
   }
 
   // MARK: - Recording with Transcription
@@ -412,19 +426,21 @@ class ShadowListening {
   /// [enableASR] ASR 전사 활성화 (default: true)
   /// [enableDiarization] 화자 분리 활성화 (default: true)
   /// [asrEngine] ASR 엔진: 'whisper' 또는 'fluid' (default: 'fluid')
+  /// [whisperModel] Whisper 모델 버전: 'largeTurbo' (default), 'medium', 'small'
   ///
   /// 내부 흐름:
   /// 1. 필요한 ML 모델 사전 로드 (ASR, Diarizer)
   /// 2. 오디오 캡처 시작 (VoiceProcessingIO 웜업)
   /// 3. Listening 윈도우 표시 → 카운트다운 3-2-1 → 리스닝 상태
   ///
-  /// 실시간 결과는 `onChunkProcessed` 이벤트로 전달됨 (5초 청크 단위)
+  /// 실시간 결과는 `onChunkProcessed` 이벤트로 전달됨 (30초 청크 단위)
   Future<bool> startListening({
     bool enableASR = true,
     bool enableDiarization = true,
     String asrEngine = 'fluid',
     String? sessionId,
     bool shouldScreenshotCapture = false,
+    String? whisperModel,
   }) {
     return ShadowListeningPlatform.instance.startListening(
       enableASR: enableASR,
@@ -432,6 +448,7 @@ class ShadowListening {
       asrEngine: asrEngine,
       sessionId: sessionId,
       shouldScreenshotCapture: shouldScreenshotCapture,
+      whisperModel: whisperModel,
     );
   }
 

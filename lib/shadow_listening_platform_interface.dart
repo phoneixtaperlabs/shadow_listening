@@ -148,7 +148,7 @@ abstract class ShadowListeningPlatform extends PlatformInterface {
   }
 
   // MARK: - Model Prewarming
-  Future<Map<String, bool>> preWarmModels({bool asr = true, bool diarization = true, bool vad = true, String? asrEngine}) {
+  Future<Map<String, bool>> preWarmModels({bool asr = true, bool diarization = true, bool vad = true, String? asrEngine, List<String>? whisperModels}) {
     throw UnimplementedError('preWarmModels() has not been implemented.');
   }
 
@@ -235,6 +235,7 @@ abstract class ShadowListeningPlatform extends PlatformInterface {
     String asrEngine = 'fluid',
     String? sessionId,
     bool shouldScreenshotCapture = false,
+    String? whisperModel,
   }) {
     throw UnimplementedError('startListening() has not been implemented.');
   }

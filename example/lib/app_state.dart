@@ -468,13 +468,13 @@ class AppState extends ChangeNotifier {
   }
 
   // Model Prewarming
-  Future<void> preWarmModels({bool asr = true, bool diarization = true, bool vad = true, String? asrEngine}) async {
+  Future<void> preWarmModels({bool asr = true, bool diarization = true, bool vad = true, String? asrEngine, List<String>? whisperModels}) async {
     isPreWarming = true;
     preWarmResult = null;
     permissionResult = 'Pre-warming models...';
     notifyListeners();
 
-    final result = await _plugin.preWarmModels(asr: asr, diarization: diarization, vad: vad, asrEngine: asrEngine);
+    final result = await _plugin.preWarmModels(asr: asr, diarization: diarization, vad: vad, asrEngine: asrEngine, whisperModels: whisperModels);
     debugPrint("$result");
 
     isPreWarming = false;
@@ -643,6 +643,7 @@ class AppState extends ChangeNotifier {
       asrEngine: listeningASREngine,
       sessionId: 'abcdefghijklmnop',
       shouldScreenshotCapture: true,
+      whisperModel: 'small',
     );
 
     if (!success) {

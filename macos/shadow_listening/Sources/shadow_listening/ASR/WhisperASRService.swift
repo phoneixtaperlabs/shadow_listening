@@ -29,6 +29,21 @@ final class WhisperASRService: ASRServiceProtocol {
 
     // MARK: - Types
 
+    /// Whisper 모델 버전
+    enum ModelVersion: String, Sendable {
+        /// Large V3 Turbo (quantized Q5_0) - 가장 높은 정확도
+        case largeTurbo = "ggml-large-v3-turbo-q5_0.bin"
+
+        /// Medium (quantized Q5_0) - 균형잡힌 성능/정확도
+        case medium = "ggml-medium-q5_0.bin"
+
+        /// Small (quantized Q5_1) - 빠른 속도, 낮은 메모리
+        case small = "ggml-small-q5_1.bin"
+
+        /// 모델 파일명
+        var modelName: String { rawValue }
+    }
+
     /// Whisper 전사 결과 세그먼트 (내부용)
     struct WhisperSegment {
         let text: String
@@ -64,6 +79,9 @@ final class WhisperASRService: ASRServiceProtocol {
 
     /// 초기화 완료 여부
     private(set) var isInitialized: Bool = false
+
+    /// 사용 중인 모델 버전 (version-based init 사용 시)
+    private(set) var modelVersion: ModelVersion?
 
     /// 누적된 전사 결과
     private var transcriptionSegments: [TranscriptionSegment] = []
@@ -106,6 +124,16 @@ final class WhisperASRService: ASRServiceProtocol {
             .path
 
         self.init(modelPath: modelPath, useGPU: useGPU, language: language)
+    }
+
+    /// 모델 버전으로 초기화
+    /// - Parameters:
+    ///   - version: 사용할 모델 버전 (.largeTurbo, .medium, .small)
+    ///   - useGPU: Metal GPU 가속 사용 여부
+    ///   - language: 언어 코드
+    convenience init(version: ModelVersion, useGPU: Bool = true, language: String = "auto") {
+        self.init(modelName: version.modelName, useGPU: useGPU, language: language)
+        self.modelVersion = version
     }
 
     deinit {

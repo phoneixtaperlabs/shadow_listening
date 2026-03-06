@@ -187,12 +187,19 @@ class MethodChannelShadowListening extends ShadowListeningPlatform {
 
   // MARK: - Model Prewarming
   @override
-  Future<Map<String, bool>> preWarmModels({bool asr = true, bool diarization = true, bool vad = true, String? asrEngine}) async {
+  Future<Map<String, bool>> preWarmModels({
+    bool asr = true,
+    bool diarization = true,
+    bool vad = true,
+    String? asrEngine,
+    List<String>? whisperModels,
+  }) async {
     final resultMap = await methodChannel.invokeMethod<Map<Object?, Object?>>('preWarmModels', {
       'asr': asr,
       'diarization': diarization,
       'vad': vad,
       if (asrEngine != null) 'asrEngine': asrEngine,
+      if (whisperModels != null) 'whisperModels': whisperModels,
     });
     if (resultMap == null) {
       return {'asr': false, 'diarization': false, 'vad': false};
@@ -340,6 +347,7 @@ class MethodChannelShadowListening extends ShadowListeningPlatform {
     String asrEngine = 'fluid',
     String? sessionId,
     bool shouldScreenshotCapture = false,
+    String? whisperModel,
   }) async {
     final success = await methodChannel.invokeMethod<bool>('startListening', {
       'enableASR': enableASR,
@@ -347,6 +355,7 @@ class MethodChannelShadowListening extends ShadowListeningPlatform {
       'asrEngine': asrEngine,
       'shouldScreenshotCapture': shouldScreenshotCapture,
       if (sessionId != null) 'sessionId': sessionId,
+      if (whisperModel != null) 'whisperModel': whisperModel,
     });
     return success ?? false;
   }

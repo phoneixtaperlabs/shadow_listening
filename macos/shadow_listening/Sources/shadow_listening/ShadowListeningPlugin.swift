@@ -29,6 +29,16 @@ public class ShadowListeningPlugin: NSObject, FlutterPlugin {
     FlutterBridge.shared.setChannel(channel)
   }
 
+  // MARK: - Helpers
+
+  private func whisperModelVersion(from string: String?) -> WhisperASRService.ModelVersion {
+    switch string {
+    case "medium": return .medium
+    case "small": return .small
+    default: return .largeTurbo
+    }
+  }
+
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     switch call.method {
     case "getPlatformVersion":
@@ -408,7 +418,7 @@ public class ShadowListeningPlugin: NSObject, FlutterPlugin {
           }
 
           let args = call.arguments as? [String: Any]
-          let modelName = args?["modelName"] as? String ?? "ggml-large-v3-turbo-q5_0.bin"
+          let version = self.whisperModelVersion(from: args?["modelName"] as? String)
 
           // 기존 서비스가 있으면 정리
           if self.whisperService != nil {
@@ -416,10 +426,10 @@ public class ShadowListeningPlugin: NSObject, FlutterPlugin {
             self.whisperService = nil
           }
 
-            self.whisperService = WhisperASRService(modelName: modelName, useGPU: true, language: "auto")  // 기본값 "auto" - nullptr로 전달
+          self.whisperService = WhisperASRService(version: version, useGPU: true, language: "auto")
           try await self.whisperService?.initialize()
 
-          self.logger.info("[Whisper] Model loaded: \(modelName)")
+          self.logger.info("[Whisper] Model loaded: \(version.modelName)")
           DispatchQueue.main.async { result(true) }
         } catch {
           self?.logger.error("[Whisper] Load failed: \(error.localizedDescription)")
@@ -438,8 +448,10 @@ public class ShadowListeningPlugin: NSObject, FlutterPlugin {
 
     case "getWhisperModelInfo":
       if let service = whisperService, service.isInitialized {
+        let version = service.modelVersion ?? .largeTurbo
         result([
-          "modelPath": WhisperASRService.defaultModelPath(modelName: "ggml-large-v3-turbo-q5_0.bin"),
+          "modelPath": WhisperASRService.defaultModelPath(modelName: version.modelName),
+          "modelVersion": "\(version)",
           "isLoaded": true,
           "useGPU": true,
           "language": "en"
@@ -502,7 +514,7 @@ public class ShadowListeningPlugin: NSObject, FlutterPlugin {
       Task.detached { [weak self] in
         guard let self = self else {
           DispatchQueue.main.async {
-            result(["whisper": false, "parakeet": false, "diarization": false, "vad": false] as [String: Bool])
+            result(["whisper:largeTurbo": false, "parakeet": false, "diarization": false, "vad": false] as [String: Bool])
           }
           return
         }
@@ -512,6 +524,7 @@ public class ShadowListeningPlugin: NSObject, FlutterPlugin {
         let warmDiarization = args?["diarization"] as? Bool ?? true
         let warmVAD = args?["vad"] as? Bool ?? true
         let asrEngine = args?["asrEngine"] as? String
+        let whisperModels = args?["whisperModels"] as? [String]
 
         var results: [String: Bool] = [:]
 
@@ -536,19 +549,22 @@ public class ShadowListeningPlugin: NSObject, FlutterPlugin {
           let warmParakeet = asrEngine == nil || asrEngine == "parakeet" || asrEngine == "fluid"
 
           if warmWhisper {
-            do {
-              let tempWhisper = WhisperASRService(
-                modelName: "ggml-large-v3-turbo-q5_0.bin",
-                useGPU: true,
-                language: "auto"
-              )
-              try await tempWhisper.initialize()
-              tempWhisper.cleanup()
-              self.logger.info("[PreWarm] Whisper ASR prewarmed successfully")
-              results["whisper"] = true
-            } catch {
-              self.logger.error("[PreWarm] Whisper ASR prewarm failed: \(error.localizedDescription)")
-              results["whisper"] = false
+            let versions: [WhisperASRService.ModelVersion] = whisperModels.map {
+              $0.map { self.whisperModelVersion(from: $0) }
+            } ?? [.largeTurbo]
+
+            for version in versions {
+              let key = "whisper:\(version)"
+              do {
+                let tempWhisper = WhisperASRService(version: version, useGPU: true, language: "auto")
+                try await tempWhisper.initialize()
+                tempWhisper.cleanup()
+                self.logger.info("[PreWarm] Whisper ASR (\(version.modelName)) prewarmed successfully")
+                results[key] = true
+              } catch {
+                self.logger.error("[PreWarm] Whisper ASR (\(version.modelName)) prewarm failed: \(error.localizedDescription)")
+                results[key] = false
+              }
             }
           }
 
@@ -1130,14 +1146,14 @@ public class ShadowListeningPlugin: NSObject, FlutterPlugin {
         let asrEngine = args?["asrEngine"] as? String ?? "fluid"
         let sessionId = args?["sessionId"] as? String
         let shouldScreenshotCapture = args?["shouldScreenshotCapture"] as? Bool ?? false
+        let whisperVersion = self.whisperModelVersion(from: args?["whisperModel"] as? String)
 
         // 1. 모델 사전 로드 (필요 시)
         if enableASR {
           if asrEngine == "whisper" {
             if self.whisperService == nil || !(self.whisperService?.isInitialized ?? false) {
               self.whisperService = WhisperASRService(
-                modelName: "ggml-large-v3-turbo-q5_0.bin",
-                useGPU: true, language: "auto"
+                version: whisperVersion, useGPU: true, language: "auto"
               )
               do {
                 try await self.whisperService?.initialize()
