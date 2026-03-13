@@ -10,6 +10,15 @@
       }
     },
     {
+      "identity" : "shadow_whisper",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/phoneixtaperlabs/shadow_whisper.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "31293ef58bceef45a91c81507cf3ef0a3ba3e7c3"
+      }
+    },
+    {
       "identity" : "swift-atomics",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-atomics.git",

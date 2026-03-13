@@ -643,7 +643,7 @@ class AppState extends ChangeNotifier {
       asrEngine: listeningASREngine,
       sessionId: 'abcdefghijklmnop',
       shouldScreenshotCapture: true,
-      whisperModel: 'small',
+      // whisperModel: 'small',
     );
 
     if (!success) {

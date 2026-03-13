@@ -12,20 +12,15 @@ let package = Package(
         .library(name: "shadow-listening", targets: ["shadow_listening"])
     ],
     dependencies: [
+        .package(url: "https://github.com/phoneixtaperlabs/shadow_whisper.git", branch: "main"),
         .package(url: "https://github.com/FluidInference/FluidAudio.git", branch: "main"),
         .package(url: "https://github.com/apple/swift-atomics.git", from: "1.3.0")
     ],
     targets: [
-        // whisper.cpp XCFramework (Metal GPU 가속 지원)
-        .binaryTarget(
-            name: "whisper",
-            url: "https://github.com/ggml-org/whisper.cpp/releases/download/v1.7.5/whisper-v1.7.5-xcframework.zip",
-            checksum: "c7faeb328620d6012e130f3d705c51a6ea6c995605f2df50f6e1ad68c59c6c4a"
-        ),
         .target(
             name: "shadow_listening",
             dependencies: [
-                "whisper",
+                .product(name: "shadow_whisper", package: "shadow_whisper"),
                 .product(name: "FluidAudio", package: "FluidAudio"),
                 .product(name: "Atomics", package: "swift-atomics"),
             ],
